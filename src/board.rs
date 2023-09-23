@@ -185,7 +185,7 @@ pub fn in_check() -> bool {
     let acol: usize = (color() + 1) % 2;
 
     // knight checks
-    (moves::knight_bbmoves(pos) & get_bitboard(2 + acol) > 0)
+    return (moves::knight_bbmoves(pos) & get_bitboard(2 + acol) > 0)
     // bishop checks (and queen)
     | (moves::bishop_bbmoves(pos) & (get_bitboard(4 + acol) | get_bitboard(8 + acol)) > 0)
     // rook checks (and queen)
@@ -193,7 +193,7 @@ pub fn in_check() -> bool {
     // white pawn checks
     | (((( 1 << (pos - 9) | 1 << (pos - 7)) & get_bitboard(0)) > 0) & (acol == 0))
     // black pawn checks
-    | (((( 1 << (pos + 9) | 1 << (pos + 7)) & get_bitboard(1)) > 0) & (acol == 1))
+    | (((( 1 << (pos + 9) | 1 << (pos + 7)) & get_bitboard(1)) > 0) & (acol == 1));
 }
 
 // Print out a bitboard as 8x8

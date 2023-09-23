@@ -1,8 +1,6 @@
 pub use crate::board;
 pub use bitintr::*;
 
-use self::board::{get_bitboard, print_bb};
-
 pub struct Move {
     pub from: usize,
     pub to: usize
