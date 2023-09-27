@@ -1,5 +1,6 @@
 pub use crate::board;
 pub use bitintr::*;
+use std::arch::asm;
 
 pub struct Move {
     pub from: usize,
@@ -270,10 +271,72 @@ const RMOVES_DOWN: [u64; 64] = [0x0000000000000000,0x0000000000000000,0x00000000
 pub fn rook_bbmoves(square: usize) -> u64 {
     let main_bb: u64 = board::get_bitboard(12) | board::get_bitboard(13);
 
-    let right: u64 = main_bb.pext(RMOVES_RIGHT[square]).reverse_bits().blsmsk().reverse_bits().pdep(RMOVES_RIGHT[square]);
-    let left: u64 = main_bb.pext(RMOVES_LEFT[square]).blsmsk().pdep(RMOVES_LEFT[square]);
-    let up: u64 = main_bb.pext(RMOVES_UP[square]).blsmsk().pdep(RMOVES_UP[square]);
-    let down: u64 = main_bb.pext(RMOVES_DOWN[square]).reverse_bits().blsmsk().reverse_bits().pdep(RMOVES_DOWN[square]);
+    // Right
+    let mut right: u64 = main_bb;
+
+    // have to do this since bitintr pext takes like 10 clock cycles (ew)
+    unsafe {
+        asm!(
+            "pext {a}, {a}, {b}",
+            a = inout(reg) right,
+            b = in(reg) RMOVES_RIGHT[square]
+        )
+    }
+
+    // asm probably has a reverse bits command, but idk it so for now I'll just use bitintr since it is fast enough
+    right = right.reverse_bits().blsmsk().reverse_bits();
+    unsafe {
+        asm!(
+            "pdep {a}, {a}, {b}",
+            a = inout(reg) right,
+            b = in(reg) RMOVES_RIGHT[square]
+        )
+    }
+
+    // Left
+    let mut left: u64 = main_bb;
+    unsafe {
+        asm!(
+            "pext {a}, {a}, {b}",
+            "blsmsk {a}, {a}",
+            "pdep {a}, {a}, {b}",
+            a = inout(reg) left,
+            b = in(reg) RMOVES_LEFT[square]
+        )
+    }
+
+    // Top
+    let mut up: u64 = main_bb;
+    unsafe {
+        asm!(
+            "pext {a}, {a}, {b}",
+            "blsmsk {a}, {a}",
+            "pdep {a}, {a}, {b}",
+            a = inout(reg) up,
+            b = in(reg) RMOVES_UP[square]
+        )
+    }
+
+    // Bottom
+    let mut down: u64 = main_bb;
+    // have to do this since bitintr pext takes like 10 clock cycles (ew)
+    unsafe {
+        asm!(
+            "pext {a}, {a}, {b}",
+            a = inout(reg) down,
+            b = in(reg) RMOVES_DOWN[square]
+        )
+    }
+
+    // asm probably has a reverse bits command, but idk it so for now I'll just use bitintr since it is fast enough
+    down = down.reverse_bits().blsmsk().reverse_bits();
+    unsafe {
+        asm!(
+            "pdep {a}, {a}, {b}",
+            a = inout(reg) down,
+            b = in(reg) RMOVES_DOWN[square]
+        )
+    }
 
     return (right | left | up | down) & !board::get_bitboard(12 + board::color());
 }
@@ -286,17 +349,75 @@ const BMOVES_DL: [u64; 64] = [0x0000000000000000,0x0000000000000000,0x0000000000
 pub fn bishop_bbmoves(square: usize) -> u64 {
     let main_bb: u64 = board::get_bitboard(12) | board::get_bitboard(13);
 
-    let right: u64 = main_bb.pext(BMOVES_UR[square]).blsmsk().pdep(BMOVES_UR[square]);
-    let left: u64 = main_bb.pext(BMOVES_UL[square]).blsmsk().pdep(BMOVES_UL[square]);
-    let up: u64 = main_bb.pext(BMOVES_DR[square]).reverse_bits().blsmsk().reverse_bits().pdep(BMOVES_DR[square]);
-    let down: u64 = main_bb.pext(BMOVES_DL[square]).reverse_bits().blsmsk().reverse_bits().pdep(BMOVES_DL[square]);
+    let mut right: u64 = main_bb;
+    unsafe {
+        asm!(
+            "pext {a}, {a}, {b}",
+            "blsmsk {a}, {a}",
+            "pdep {a}, {a}, {b}",
+            a = inout(reg) right,
+            b = in(reg) BMOVES_UR[square]
+        )
+    }
+    let mut left: u64 = main_bb;
+    unsafe {
+        asm!(
+            "pext {a}, {a}, {b}",
+            "blsmsk {a}, {a}",
+            "pdep {a}, {a}, {b}",
+            a = inout(reg) left,
+            b = in(reg) BMOVES_UL[square]
+        )
+    }
+
+    let mut up: u64 = main_bb;
+    // have to do this since bitintr pext takes like 10 clock cycles (ew)
+    unsafe {
+        asm!(
+            "pext {a}, {a}, {b}",
+            a = inout(reg) up,
+            b = in(reg) BMOVES_DR[square]
+        )
+    }
+
+    // asm probably has a reverse bits command, but idk it so for now I'll just use bitintr since it is fast enough
+    up = up.reverse_bits().blsmsk().reverse_bits();
+    unsafe {
+        asm!(
+            "pdep {a}, {a}, {b}",
+            a = inout(reg) up,
+            b = in(reg) BMOVES_DR[square]
+        )
+    }
+
+
+    let mut down: u64 = main_bb;
+    // have to do this since bitintr pext takes like 10 clock cycles (ew)
+    unsafe {
+        asm!(
+            "pext {a}, {a}, {b}",
+            a = inout(reg) down,
+            b = in(reg) BMOVES_DL[square]
+        )
+    }
+
+    // asm probably has a reverse bits command, but idk it so for now I'll just use bitintr since it is fast enough
+    down = down.reverse_bits().blsmsk().reverse_bits();
+    unsafe {
+        asm!(
+            "pdep {a}, {a}, {b}",
+            a = inout(reg) down,
+            b = in(reg) BMOVES_DL[square]
+        )
+    }
 
     return (right | left | up | down) & !board::get_bitboard(12 + board::color());
 }
 
 // Get all legal moves
-pub fn pslegalmoves() -> Vec<(u64, u64, usize)>{
-    let mut moves: Vec<(u64, u64, usize)> = vec![];
+pub fn pslegalmoves(moves: &mut Vec<(u64, u64, usize)>) -> i32{
+    //let mut moves: Vec<(u64, u64, usize)> = vec![];
+    let mut mv_count: i32 = 0;
 
     // Get the pawn moves
     let mut pawns: u64 = board::get_bitboard(0 + board::color());
@@ -316,6 +437,7 @@ pub fn pslegalmoves() -> Vec<(u64, u64, usize)>{
         // Go through each "to" square and add to moves
         while tos > 0 {
             moves.push((from, tos.blsi(), 0 + board::color()));
+            mv_count += 1;
             tos ^= tos.blsi();
         }
         pawns ^= pawns.blsi();
@@ -330,6 +452,7 @@ pub fn pslegalmoves() -> Vec<(u64, u64, usize)>{
 
         while tos > 0 {
             moves.push((from, tos.blsi(), 2 + board::color()));
+            mv_count += 1;
             tos ^= tos.blsi();
         }
         knights ^= knights.blsi();
@@ -344,6 +467,7 @@ pub fn pslegalmoves() -> Vec<(u64, u64, usize)>{
 
         while tos > 0 {
             moves.push((from, tos.blsi(), 4 + board::color()));
+            mv_count += 1;
             tos ^= tos.blsi();
         }
         bishops ^= bishops.blsi();
@@ -357,6 +481,7 @@ pub fn pslegalmoves() -> Vec<(u64, u64, usize)>{
 
         while tos > 0 {
             moves.push((from, tos.blsi(), 6 + board::color()));
+            mv_count += 1;
             tos ^= tos.blsi();
         }
         rooks ^= rooks.blsi();
@@ -371,6 +496,7 @@ pub fn pslegalmoves() -> Vec<(u64, u64, usize)>{
 
         while tos > 0 {
             moves.push((from, tos.blsi(), 8 + board::color()));
+            mv_count += 1;
             tos ^= tos.blsi();
         }
         queens ^= queens.blsi();
@@ -384,12 +510,13 @@ pub fn pslegalmoves() -> Vec<(u64, u64, usize)>{
         tos = king_bbmoves(from.trailing_zeros() as usize);
         while tos > 0 {
             moves.push((from, tos.blsi(), 10 + board::color()));
+            mv_count += 1;
             tos ^= tos.blsi();
         }
         kings ^= kings.blsi();
     }
 
-    return moves;
+    return mv_count;
 }
 
 pub fn causes_check(mv: (u64, u64, usize)) -> bool {

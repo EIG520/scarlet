@@ -2,7 +2,7 @@ pub use bitintr::*;
 pub use crate::moves;
 
 
-static mut BITBOARDS: [u64; 14] = [
+static mut BITBOARDS: [u64; 16] = [
     // Pawns
     65280, 71776119061217280, 
     // Knights
@@ -16,10 +16,12 @@ static mut BITBOARDS: [u64; 14] = [
     // Kings
     8, 576460752303423488,
     // Black / White
-    65535, 18446462598732840960
+    65535, 18446462598732840960,
+    // For an optimization later
+    0,0
 ];
 
-static mut PREV: [[u64; 14]; 10000] = [[0; 14]; 10000];
+static mut PREV: [[u64; 16]; 10000] = [[0; 16]; 10000];
 static mut POS: usize = 2;
 
 static mut COLOR: usize = 0;

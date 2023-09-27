@@ -24,38 +24,40 @@ pub fn perft_lim(lim: i32) {
 
 // fixed perft
 pub fn perft_depth(depth: i32, root: bool) -> i32{
-    board::change_turn();
-    if board::in_check() {
-        board::change_turn();
-        return 0;
-    }
-    board::change_turn();
-    
     if depth == 0 {
         return 1;
     }
 
     let mut counter: i32 = 0;
+    let mut i: usize = 0;
 
-    let mvs = moves::pslegalmoves();
+    let mut mvs = vec![] ;
 
+    let cnt = moves::pslegalmoves(&mut mvs);
     // // Can't do this with pseudo legal move gen :(
     // if (depth == 1) & !root {
     //     return mvs.len() as i32;
     // }
 
-    for mv in mvs {
-        board::movebb(mv.0, mv.1, mv.2);
+    while i < cnt as usize{
+        board::movebb(mvs[i].0, mvs[i].1, mvs[i].2);
         
-        let sub: i32 = perft_depth(depth-1, false);
+        board::change_turn();
+        if !board::in_check() {
+            board::change_turn();
+            let sub: i32 = perft_depth(depth-1, false);
 
-        if root {
-           println!("{}: {}", board::move_to_chess(mv), sub);
+            if root {
+                println!("{}: {}", board::move_to_chess(mvs[i]), sub);
+            }
+
+            counter += sub;
+        } else {
+            board::change_turn();
         }
-
-        counter += sub;
-
         board::undo();
+
+        i += 1;
     }
 
     return counter;
