@@ -18,17 +18,17 @@ pub fn gen_movelist() {
 // perft until a given limit
 pub fn perft_lim(lim: i32) {
     for i in 0..lim {
-        println!("{}", perft_depth(i, false));
+        println!("{}", perft_nobatch(i, false));
     }
 }
 
-// fixed perft
-pub fn perft_depth(depth: i32, root: bool) -> i32{
+// perft without batch (also pseudolegal)
+pub fn perft_nobatch(depth: i32, root: bool) -> u64{
     if depth == 0 {
         return 1;
     }
 
-    let mut counter: i32 = 0;
+    let mut counter: u64 = 0;
     let mut i: usize = 0;
 
     let mut mvs = vec![] ;
@@ -39,13 +39,15 @@ pub fn perft_depth(depth: i32, root: bool) -> i32{
     //     return mvs.len() as i32;
     // }
 
+    //println!("{:?}", mvs);
+
     while i < cnt as usize{
-        board::movebb(mvs[i].0, mvs[i].1, mvs[i].2);
-        
+        board::movebb(mvs[i].0, mvs[i].1, mvs[i].2, mvs[i].3);
+
         board::change_turn();
         if !board::in_check() {
             board::change_turn();
-            let sub: i32 = perft_depth(depth-1, false);
+            let sub: u64 = perft_nobatch(depth-1, false);
 
             if root {
                 println!("{}: {}", board::move_to_chess(mvs[i]), sub);
@@ -53,8 +55,10 @@ pub fn perft_depth(depth: i32, root: bool) -> i32{
 
             counter += sub;
         } else {
+            //println!("{}", board::move_to_chess(mvs[i]));
             board::change_turn();
         }
+
         board::undo();
 
         i += 1;
