@@ -423,7 +423,6 @@ pub fn bishop_bbmoves(square: usize) -> u64 {
 
 // Get all legal moves
 pub fn pslegalmoves(moves: &mut Vec<(u64, u64, usize, usize)>) -> i32{
-
     //let mut moves: Vec<(u64, u64, usize)> = vec![];
     let mut mv_count: i32 = 0;
 
@@ -648,4 +647,67 @@ pub fn pslegalmoves(moves: &mut Vec<(u64, u64, usize, usize)>) -> i32{
     }
 
     return mv_count;
+}
+
+pub fn checkmsk(from:usize, ptype:usize) {
+    
+}
+
+// Get specific directions for sliding pieces, from checkmsk
+#[inline(always)]
+pub fn b_ul (square: usize, main_bb: u64) -> u64 {
+    let mut mvs: u64 = main_bb;
+    unsafe {
+        asm!(
+            "pext {a}, {a}, {b}",
+            "blsmsk {a}, {a}",
+            "pdep {a}, {a}, {b}",
+            a = inout(reg) mvs,
+            b = in(reg) BMOVES_UL[square]
+        )
+    }
+    mvs
+}
+pub fn b_ur (square: usize, main_bb: u64) -> u64 {
+    let mut mvs: u64 = main_bb;
+    unsafe {
+        asm!(
+            "pext {a}, {a}, {b}",
+            "blsmsk {a}, {a}",
+            "pdep {a}, {a}, {b}",
+            a = inout(reg) mvs,
+            b = in(reg) BMOVES_UR[square]
+        )
+    }
+    mvs
+}
+pub fn b_dr (square: usize, main_bb: u64) -> u64 {
+    let mut mvs: u64 = main_bb;
+    unsafe {
+        asm!(
+            "pext {a}, {a}, {b}",
+            "bswap {a}",
+            "blsmsk {a}, {a}",
+            "bswap {a}",
+            "pdep {a}, {a}, {b}",
+            a = inout(reg) mvs,
+            b = in(reg) BMOVES_DR[square]
+        )
+    }
+    mvs
+}
+pub fn b_dl (square: usize, main_bb: u64) -> u64 {
+    let mut mvs: u64 = main_bb;
+    unsafe {
+        asm!(
+            "pext {a}, {a}, {b}",
+            "bswap {a}",
+            "blsmsk {a}, {a}",
+            "bswap {a}",
+            "pdep {a}, {a}, {b}",
+            a = inout(reg) mvs,
+            b = in(reg) BMOVES_DL[square]
+        )
+    }
+    mvs
 }
