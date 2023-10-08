@@ -2,7 +2,7 @@ pub use bitintr::*;
 pub use crate::moves;
 
 
-static mut BITBOARDS: [u64; 16] = [
+static mut BITBOARDS: [u64; 17] = [
     // Pawns
     65280, 71776119061217280, 
     // Knights
@@ -18,17 +18,20 @@ static mut BITBOARDS: [u64; 16] = [
     // White / Black
     65535, 18446462598732840960,
     // Castling rights : 1000 means "white can kingside castle", 0100 means "white can queenside castle", 0010 means "black can kingside castle", and 0001 means "black can queenside castle"
-    0b1100,
+    0b1111,
     // Number of halfmoves since last capture/tactical move (for 50 move rule)
+    0,
+    // En Passant square
     0,
 ];
 
-static mut PREV: [[u64; 16]; 10000] = [[0; 16]; 10000];
+static mut PREV: [[u64; 17]; 10000] = [[0; 17]; 10000];
 static mut POS: usize = 2;
 
 static mut COLOR: usize = 0;
 
 // Set given square to a specific piece
+#[inline(always)]
 pub fn set_square(square: usize, piece: usize) {
     del_from_square(square);
     unsafe {
@@ -38,6 +41,7 @@ pub fn set_square(square: usize, piece: usize) {
 }
 
 // Remove current piece at square
+#[inline(always)]
 pub fn del_from_square(square: usize) {
     let mut i: usize = 0;
 
@@ -48,7 +52,11 @@ pub fn del_from_square(square: usize) {
         i+=1;
     }
 }
+pub fn set_bitboard(index: usize, value: u64) {
+    unsafe {BITBOARDS[index] = value}
+}
 // Delete by bitboard (slightly faster since no left shift)
+#[inline(always)]
 pub fn del_from_squarebb(squarebb: u64) {
     let mut i: usize = 0;
 
@@ -86,6 +94,7 @@ pub fn movebb(frombb: u64, tobb: u64, piece: usize, flag: usize) {
         //         BITBOARDS[14] &= 0b1011;
         //     }
         // }
+        BITBOARDS[16] = 0;
 
         match flag {
             // Regular Move
@@ -95,6 +104,15 @@ pub fn movebb(frombb: u64, tobb: u64, piece: usize, flag: usize) {
 
                 BITBOARDS[piece] ^= frombb | tobb;
                 BITBOARDS[12 + color()] ^= frombb | tobb;
+
+                // print_bb(frombb << 16);
+                // print_bb(tobb);
+
+                if (piece == 0) & (frombb << 16 == tobb) {
+                    BITBOARDS[16] = tobb >> 8;
+                } else if (piece == 1) & (frombb >> 16 == tobb) {
+                    BITBOARDS[16] = tobb << 8;
+                }
             }
             // En passant
             1 => {
@@ -214,6 +232,7 @@ pub fn movebb(frombb: u64, tobb: u64, piece: usize, flag: usize) {
 }
 
 // Undo Move
+#[inline(always)]
 pub fn undo() {
     unsafe {
         POS -= 1;
@@ -225,9 +244,12 @@ pub fn undo() {
 }
 
 // Get piece bitboard
+
+#[inline(always)]
 pub fn get_bitboard(piece: usize) -> u64 {
     return unsafe { BITBOARDS[piece] }
 }
+#[inline(always)]
 pub fn get_prev_bitboard(piece: usize) -> u64 {
     return unsafe { PREV[POS - 1][piece] };
 }
@@ -303,6 +325,7 @@ pub fn chesscol_to_square(col: char) -> usize{
     return 0;
 }
 
+#[inline(always)]
 pub fn chess_to_square(square: String) -> usize {
     let x: usize = square.chars().collect::<Vec<char>>()[1].to_digit(10).unwrap() as usize - 1;
     let y: usize = chesscol_to_square(square.chars().next().unwrap());
@@ -310,14 +333,20 @@ pub fn chess_to_square(square: String) -> usize {
     return 8*x + y;
 }
 
+#[inline(always)]
 pub fn chess_to_move(mv: String, pt: usize, flag: usize) -> (u64, u64, usize, usize){
     return (1 << chess_to_square(String::from(&mv[0..2])), 1 << chess_to_square(String::from(&mv[2..4])), pt, flag);
 }
 
+#[inline(always)]
 pub fn color() -> usize {
     return unsafe { COLOR };
 }
 
+pub fn set_color(color: usize) {
+    unsafe {COLOR = color}
+}
+#[inline(always)]
 pub fn change_turn() {
     unsafe {COLOR = (COLOR + 1) % 2;}
 }
@@ -358,7 +387,7 @@ pub fn print_bb(bitboard: u64) {
         i+=1;
         if i == 8 {
             i = 0;
-            println!();
+            print!("\n");
         }
     }
     println!();
@@ -427,10 +456,10 @@ pub fn load_from_fen(fen: String) {
     }
     unsafe {BITBOARDS[14] = crs}
 
-    // TODO: This crap (stinky)
+    // TODO: This (stinky)
 
 
-    // I do NOT feel like doing en passant square stuff rn (kill yourself)
+    // I do NOT feel like doing en passant square stuff rn
 
     // Fifty move rule stuff
 

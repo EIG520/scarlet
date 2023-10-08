@@ -18,7 +18,7 @@ pub fn gen_movelist() {
 // perft until a given limit
 pub fn perft_lim(lim: i32) {
     for i in 0..lim {
-        println!("{}", perft_nobatch(i, false));
+        println!("{}", perft(i, false));
     }
 }
 
@@ -33,10 +33,10 @@ pub fn perft_nobatch(depth: i32, root: bool) -> u64{
 
     let mut mvs = vec![] ;
 
-    let cnt = moves::pslegalmoves(&mut mvs);
+    let cnt = moves::legalmoves(&mut mvs);
     // // Can't do this with pseudo legal move gen :(
     // if (depth == 1) & !root {
-    //     return mvs.len() as i32;
+    //     return mvs.len() as u64;
     // }
 
     //println!("{:?}", mvs);
@@ -67,3 +67,38 @@ pub fn perft_nobatch(depth: i32, root: bool) -> u64{
     return counter;
 }
 
+// perft
+pub fn perft(depth: i32, root: bool) -> u64{
+    if depth == 0 {
+        return 1;
+    }
+
+    let mut counter: u64 = 0;
+    let mut i: usize = 0;
+
+    let mut mvs = [(0,0,0,0);300];
+    let cnt = moves::legalmoves(&mut mvs);
+
+    if (depth == 1) & !root {
+        return cnt as u64;
+    }
+
+
+    while i < cnt as usize{
+        board::movebb(mvs[i].0, mvs[i].1, mvs[i].2, mvs[i].3);
+
+        let sub: u64 = perft(depth-1, false);
+
+        if root {
+            println!("{}: {}", board::move_to_chess(mvs[i]), sub);
+        }
+
+        counter += sub;
+
+        board::undo();
+
+        i += 1;
+    }
+
+    return counter;
+}

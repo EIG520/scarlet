@@ -1,38 +1,37 @@
 pub use scarlet::board;
 pub use scarlet::moves;
 pub use scarlet::tools;
+pub use scarlet::uci;
 
-use std::time::Instant;
+//use std::time::Instant;
 
 fn main() {
-    board::load_from_fen(String::from("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"));
+    //let start = Instant::now();
 
-    let start = Instant::now();
-
-    // let mut mv: (u64, u64, usize, usize) = board::chess_to_move("b4b1".to_string(), 6, 0);
+    // let mut mv: (u64, u64, usize, usize) = board::chess_to_move("a2a4".to_string(), 0, 0);
     // board::movebb(mv.0, mv.1, mv.2, mv.3);
 
-
-    // mv = board::chess_to_move("h4g3".to_string(), 11, 0);
+    // mv = board::chess_to_move("h7h5".to_string(), 1, 0);
     // board::movebb(mv.0, mv.1, mv.2, mv.3);
 
-    // mv = board::chess_to_move("a5b4".to_string(), 10, 0);
+    // mv = board::chess_to_move("a4a5".to_string(), 0, 0);
     // board::movebb(mv.0, mv.1, mv.2, mv.3);
 
-    // mv = board::chess_to_move("g3f2".to_string(), 11, 0);
+    // mv = board::chess_to_move("b7b5".to_string(), 1, 0);
     // board::movebb(mv.0, mv.1, mv.2, mv.3);
 
+    // mv = board::chess_to_move("h5g6".to_string(), 0, 1);
+    // board::movebb(mv.0, mv.1, mv.2, mv.3);
     // mv = board::chess_to_move("b4c3".to_string(), 10, 0);
     // board::movebb(mv.0, mv.1, mv.2, mv.3);
 
     // mv = board::chess_to_move("f2e2".to_string(), 11, 0);
     // board::movebb(mv.0, mv.1, mv.2, mv.3);
     
-    //println!("{}", board::get_bitboard(14));
-
-    println!("{}", tools::perft_nobatch(6,true));
+    // for _i in 0..1000000 {
+    //     moves::legalmoves(&mut [(0,0,0,0);300]);
+    // }
+    uci::uci();
     
-
-    println!("Time: {:?}", start.elapsed());
+    //println!("Time: {:?}", start.elapsed());
 }
-
