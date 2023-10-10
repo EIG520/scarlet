@@ -72,7 +72,7 @@ pub fn perft(depth: i32, root: bool) -> u64{
     if depth == 0 {
         return 1;
     }
-
+    if board::is_50mr() { return 0; }
     let mut counter: u64 = 0;
     let mut i: usize = 0;
 
@@ -82,7 +82,6 @@ pub fn perft(depth: i32, root: bool) -> u64{
     if (depth == 1) & !root {
         return cnt as u64;
     }
-
 
     while i < cnt as usize{
         board::movebb(mvs[i].0, mvs[i].1, mvs[i].2, mvs[i].3);

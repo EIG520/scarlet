@@ -56,6 +56,7 @@ pub fn handle_fen(mut flds: SplitWhitespace<'_>) {
     for i in 0..64 {
         board::del_from_square(i);
     }
+    board::reset_hist();
 
     // Set the pieces
     for c in flds.next().unwrap().chars() {
@@ -110,8 +111,16 @@ pub fn handle_fen(mut flds: SplitWhitespace<'_>) {
     // TODO: This (stinky)
 
 
-    // I do NOT feel like doing en passant square stuff rn
-    flds.next();
+    // En passant target square
+    let ep = board::chess_to_square(flds.next().unwrap().to_string());
+    // If chest_to_square returns something > 64, then it is invalid
+    // or _ and should mean that the ep bitboard is set to 0
+    if ep > 64 {
+        board::set_bitboard(16, 0);
+    } else {
+        board::set_bitboard(16, 1 << ep);
+    }
+
     // Fifty move rule stuff
     flds.next();
     // Move number

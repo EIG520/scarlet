@@ -1,5 +1,8 @@
 pub use bitintr::*;
 pub use crate::moves;
+use std::{collections::HashSet, hash::Hash};
+use lazy_static::lazy_static;
+use std::sync::Mutex;
 
 
 static mut BITBOARDS: [u64; 17] = [
@@ -25,6 +28,10 @@ static mut BITBOARDS: [u64; 17] = [
     0,
 ];
 
+// Previous positions (so PREV but not including halfmoves)
+lazy_static! {
+    pub static ref PREV_POSES: Mutex<HashSet<[u64; 16]>> = Mutex::new(HashSet::new());
+}
 static mut PREV: [[u64; 17]; 10000] = [[0; 17]; 10000];
 static mut POS: usize = 2;
 
@@ -57,7 +64,8 @@ pub fn set_bitboard(index: usize, value: u64) {
 }
 // Delete by bitboard (slightly faster since no left shift)
 #[inline(always)]
-pub fn del_from_squarebb(squarebb: u64) {
+pub fn del_from_squarebb(squarebb: u64) -> bool {
+    let saved = unsafe{BITBOARDS};
     let mut i: usize = 0;
 
     while i < 14 {
@@ -66,48 +74,33 @@ pub fn del_from_squarebb(squarebb: u64) {
         }
         i += 1;
     }
+    saved == unsafe{BITBOARDS}
 }
 
 // Move
 pub fn movebb(frombb: u64, tobb: u64, piece: usize, flag: usize) {
     unsafe {
         PREV[POS] = BITBOARDS;
+        PREV_POSES.lock().unwrap().insert([BITBOARDS[0], BITBOARDS[1], BITBOARDS[2], BITBOARDS[3], BITBOARDS[4], BITBOARDS[5], BITBOARDS[6], BITBOARDS[7], BITBOARDS[8], BITBOARDS[9], BITBOARDS[10], BITBOARDS[11], BITBOARDS[12], BITBOARDS[13], BITBOARDS[14] /* Skip 15 */, BITBOARDS[16]]);
         POS += 1;
+        BITBOARDS[15] += 1;
+        if piece == 0 {
+            BITBOARDS[15] = 0
+        }
 
-        // if (piece == 10) | (piece == 11) | (piece == 12) | (piece == 6) | (piece == 7) {
-        //     if piece == 10 {
-        //         BITBOARDS[14] &= 0b0011;
-        //     }
-        //     if piece == 11 {
-        //         BITBOARDS[14] &= 0b1100;
-        //     }
-        //     if (piece == 7) & (frombb & 0b1000000000000000000000000000000000000000000000000000000000000000 > 0) {
-        //         BITBOARDS[14] &= 0b1110;
-        //     }
-        //     if (piece == 7) & (frombb & 0b0000000100000000000000000000000000000000000000000000000000000000 > 0) {
-        //         BITBOARDS[14] &= 0b1101;
-        //     }
-        //     if (piece == 6) & (frombb & 0b1 > 0) {
-        //         BITBOARDS[14] &= 0b0111;
-        //     }
-        //     if (piece == 6) & (frombb & 0b10000000 > 0) {
-        //         BITBOARDS[14] &= 0b1011;
-        //     }
-        // }
         BITBOARDS[16] = 0;
 
         match flag {
             // Regular Move
             0 => {
                 // Clear other piece bitboards if it is an attacking move
-                del_from_squarebb(tobb);
+                BITBOARDS[15] *= (!del_from_squarebb(tobb)) as u64;
 
                 BITBOARDS[piece] ^= frombb | tobb;
                 BITBOARDS[12 + color()] ^= frombb | tobb;
 
                 // print_bb(frombb << 16);
                 // print_bb(tobb);
-
                 if (piece == 0) & (frombb << 16 == tobb) {
                     BITBOARDS[16] = tobb >> 8;
                 } else if (piece == 1) & (frombb >> 16 == tobb) {
@@ -230,6 +223,14 @@ pub fn movebb(frombb: u64, tobb: u64, piece: usize, flag: usize) {
         }
     }
 }
+// Detect game endings
+pub fn is_repetition() -> bool {
+    unsafe{PREV_POSES.lock().unwrap().contains(&[BITBOARDS[0], BITBOARDS[1], BITBOARDS[2], BITBOARDS[3], BITBOARDS[4], BITBOARDS[5], BITBOARDS[6], BITBOARDS[7], BITBOARDS[8], BITBOARDS[9], BITBOARDS[10], BITBOARDS[11], BITBOARDS[12], BITBOARDS[13], BITBOARDS[14] /* Skip 15 */, BITBOARDS[16]])}
+}
+pub fn is_50mr() -> bool {
+    unsafe{BITBOARDS[15] >= 100}
+}
+
 
 // Undo Move
 #[inline(always)]
@@ -237,10 +238,18 @@ pub fn undo() {
     unsafe {
         POS -= 1;
         BITBOARDS = PREV[POS];
+        PREV_POSES.lock().unwrap().remove(&[BITBOARDS[0], BITBOARDS[1], BITBOARDS[2], BITBOARDS[3], BITBOARDS[4], BITBOARDS[5], BITBOARDS[6], BITBOARDS[7], BITBOARDS[8], BITBOARDS[9], BITBOARDS[10], BITBOARDS[11], BITBOARDS[12], BITBOARDS[13], BITBOARDS[14] /* Skip 15 */, BITBOARDS[16]]);
         
         COLOR = (COLOR + 1) % 2;
     }
     
+}
+
+pub fn reset_hist() {
+    unsafe {
+        PREV = [[0;17];10000];
+        PREV_POSES.lock().unwrap().clear();
+    }
 }
 
 // Get piece bitboard
@@ -322,15 +331,23 @@ pub fn chesscol_to_square(col: char) -> usize{
     if col == 'h' {
         return 0;
     }
-    return 0;
+    // return number >64 if invalid
+    return 65;
 }
 
 #[inline(always)]
 pub fn chess_to_square(square: String) -> usize {
-    let x: usize = square.chars().collect::<Vec<char>>()[1].to_digit(10).unwrap() as usize - 1;
+    if square.chars().collect::<Vec<char>>().len() < 2 {return 65;}
+
+    let x: char  = square.chars().collect::<Vec<char>>()[1];
     let y: usize = chesscol_to_square(square.chars().next().unwrap());
 
-    return 8*x + y;
+    if x.is_digit(10) {
+        return 8*(x.to_digit(10).unwrap() as usize - 1) + y;
+    } else {
+        // Return number >64 if invalid
+        return 65;
+    }
 }
 
 #[inline(always)]
@@ -394,6 +411,7 @@ pub fn print_bb(bitboard: u64) {
 }
 
 // FEN loading
+// Unused though
 pub fn load_from_fen(fen: String) {
     let flds:Vec<&str> = fen.split_whitespace().collect();
     let mut pos: usize = 0;
