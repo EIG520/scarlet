@@ -1087,6 +1087,303 @@ pub fn legalmoves(moves: &mut [(u64, u64, usize, usize)]) -> i32{
     return mvcount as i32;
 }
 
+// Get all legal moves
+pub fn loudmoves(moves: &mut [(u64, u64, usize, usize)]) -> i32{
+    let mut mvcount = 0;
+    // Checkmask
+    // And with pieces so that quiet moves are filtered out
+    let chmsk = checkmsk(board::get_bitboard(12) | board::get_bitboard(13)) & (board::get_bitboard(12) | board::get_bitboard(13));
+    let pnmsk = pinmsk();
+
+    // Get the pawn moves
+    let mut pawns: u64 = board::get_bitboard(0 + board::color()) & !pnmsk;
+    let mut ppawns: u64 = board::get_bitboard(0 + board::color()) & pnmsk;
+
+    let mut from: u64;
+    let mut tos_ep: u64;
+    let mut tos: u64;
+
+
+    while pawns > 0 {
+        from = pawns.blsi();
+
+        // Get moveto bitboard
+
+        // Less readable but I'm supposed to minimize branches I think?
+        // I mean there are tons of branches in the while loops but I'm not sure I can do anything
+        tos = (wpawn_bbmoves(from.trailing_zeros() as usize) & chmsk) * (board::color() ^ 1) as u64;
+        tos_ep = wpawnep_bbmoves(from.trailing_zeros() as usize) & (chmsk | (chmsk << 8)) * (board::color() ^ 1) as u64;
+
+        tos += (bpawn_bbmoves(from.trailing_zeros() as usize) & chmsk) * board::color() as u64;
+        tos_ep += (bpawnep_bbmoves(from.trailing_zeros() as usize) & (chmsk | (chmsk >> 8))) * board::color() as u64;
+        // if board::color() == 0 {
+        //     tos = wpawn_bbmoves(from.trailing_zeros() as usize) & chmsk;
+        //     tos_ep = wpawnep_bbmoves(from.trailing_zeros() as usize) & (chmsk | (chmsk << 8));
+        // } else {
+        //     tos = bpawn_bbmoves(from.trailing_zeros() as usize) & chmsk;
+        //     tos_ep = bpawnep_bbmoves(from.trailing_zeros() as usize) & (chmsk | (chmsk >> 8));
+        // }
+        
+        // Handle promotions
+        if tos & 0xFF000000000000FF > 0 {
+            // Go through each "to" square and add to moves
+            while tos > 0 {
+                moves[mvcount] = (from, tos.blsi(), board::color(), 3);
+                mvcount += 1;
+                moves[mvcount] = (from, tos.blsi(), board::color(), 4);
+                mvcount += 1;
+                moves[mvcount] = (from, tos.blsi(), board::color(), 5);
+                mvcount += 1;
+                moves[mvcount] = (from, tos.blsi(), board::color(), 6);
+                mvcount += 1;
+
+                tos ^= tos.blsi();
+            }
+        } else {
+            // Go through each "to" square and add to moves
+            while tos > 0 {
+                moves[mvcount] = (from, tos.blsi(), board::color(), 0);
+                mvcount += 1;
+                
+                tos = tos.blsr();
+            }
+            while tos_ep > 0 {
+                let acol = (board::color() + 1) % 2;
+                let pos: usize = board::get_bitboard(10 + board::color()).trailing_zeros() as usize;
+                let bb = board::get_bitboard(12) | board::get_bitboard(13);
+
+                let mut rl = er_l(pos, bb ^ from) & (board::get_bitboard(6 + acol) | board::get_bitboard(8 + acol));
+                rl = (rl > 0) as u64 * er_l(pos, bb ^ from);
+                let mut rr = er_r(pos, bb ^ from) & (board::get_bitboard(6 + acol) | board::get_bitboard(8 + acol));
+                rr = (rr > 0) as u64 * er_r(pos, bb ^ from);
+                
+                let mut tep = tos_ep.blsi();
+                // If color is 1 (black), shift up
+                tep <<= 8 * board::color();
+                // Other way around
+                tep >>= 8 * (board::color() ^ 1); 
+
+
+                if (rl | rr) & tep == 0 {
+                    moves[mvcount] = (from, tos_ep.blsi(), board::color(), 1 + board::color());
+                    mvcount += 1;
+                }
+                tos_ep ^= tos_ep.blsi();
+            }
+        }
+        pawns ^= pawns.blsi();
+    }
+    while ppawns > 0 {
+        from = ppawns.blsi();
+
+        // Get moveto bitboard
+        if board::color() == 0 {
+            tos = wpawn_bbmoves(from.trailing_zeros() as usize) & chmsk & pndmsk(from);
+            tos_ep = wpawnep_bbmoves(from.trailing_zeros() as usize) & (chmsk | (chmsk << 8)) & pndmsk(from);
+        } else {
+            tos = bpawn_bbmoves(from.trailing_zeros() as usize) & chmsk & pndmsk(from);
+            tos_ep = bpawnep_bbmoves(from.trailing_zeros() as usize) & (chmsk | (chmsk >> 8)) & pndmsk(from);
+        }
+        
+        // Handle promotions
+        if tos & 0xFF000000000000FF > 0 {
+            // Go through each "to" square and add to moves
+            while tos > 0 {
+                moves[mvcount] = (from, tos.blsi(), board::color(), 3);
+                mvcount += 1;
+                moves[mvcount] = (from, tos.blsi(), board::color(), 4);
+                mvcount += 1;
+                moves[mvcount] = (from, tos.blsi(), board::color(), 5);
+                mvcount += 1;
+                moves[mvcount] = (from, tos.blsi(), board::color(), 6);
+                mvcount += 1;
+                
+                tos ^= tos.blsi();
+            }
+        } else {
+            // Go through each "to" square and add to moves
+            while tos > 0 {
+                moves[mvcount] = (from, tos.blsi(), board::color(), 0);
+                mvcount += 1;
+                
+                tos ^= tos.blsi();
+            }
+            while tos_ep > 0 {
+                let acol = (board::color() + 1) % 2;
+                let pos: usize = board::get_bitboard(10 + board::color()).trailing_zeros() as usize;
+                let bb = board::get_bitboard(12) | board::get_bitboard(13);
+
+                let mut rl = er_l(pos, bb ^ from) & (board::get_bitboard(6 + acol) | board::get_bitboard(8 + acol));
+                rl = (rl > 0) as u64 * er_l(pos, bb ^ from);
+                let mut rr = er_r(pos, bb ^ from) & (board::get_bitboard(6 + acol) | board::get_bitboard(8 + acol));
+                rr = (rr > 0) as u64 * er_r(pos, bb ^ from);
+                
+                let mut tep = tos_ep.blsi();
+                // If color is 1 (black), shift up
+                tep <<= 8 * board::color();
+                // Other way around
+                tep >>= 8 * (board::color() ^ 1); 
+
+                if (rl | rr) & tep == 0 {
+                    moves[mvcount] = (from, tos_ep.blsi(), board::color(), 1 + board::color());
+                    mvcount += 1;
+                }
+                tos_ep ^= tos_ep.blsi();
+            }
+        }
+        ppawns ^= ppawns.blsi();
+    }
+    
+    // Get the knight moves
+    let mut knights: u64 = board::get_bitboard(2 + board::color()) & !pnmsk;
+    while knights > 0 {
+        from = knights.blsi();
+        
+        tos = knight_bbmoves(from.trailing_zeros() as usize) & chmsk;
+
+        while tos > 0 {
+            moves[mvcount] = (from, tos.blsi(), 2 + board::color(), 0);
+            mvcount += 1;
+            tos ^= tos.blsi();
+        }
+        knights ^= knights.blsi();
+    }
+
+    // Get the bishop moves
+    let mut bishops: u64 = board::get_bitboard(4 + board::color()) & !pnmsk;
+    let mut pbishops: u64 = board::get_bitboard(4 + board::color()) & pnmsk;
+    while bishops > 0 {
+        from = bishops.blsi();
+
+        tos = bishop_bbmoves(from.trailing_zeros() as usize) & chmsk;
+
+        while tos > 0 {
+            moves[mvcount] = (from, tos.blsi(), 4 + board::color(), 0);
+            mvcount += 1;
+            tos ^= tos.blsi();
+        }
+        bishops ^= bishops.blsi();
+    }
+    while pbishops > 0 {
+        from = pbishops.blsi();
+
+        tos = bishop_bbmoves(from.trailing_zeros() as usize) & chmsk & pndmsk(from);
+
+        while tos > 0 {
+            moves[mvcount] = (from, tos.blsi(), 4 + board::color(), 0);
+            mvcount += 1;
+            tos ^= tos.blsi();
+        }
+        pbishops ^= pbishops.blsi();
+    }
+
+    // Get the rook moves
+    let mut rooks: u64 = board::get_bitboard(6 + board::color()) & !pnmsk;
+    let mut prooks: u64 = board::get_bitboard(6 + board::color()) & pnmsk;
+    while rooks > 0 {
+        from = rooks.blsi();
+
+        tos = rook_bbmoves(from.trailing_zeros() as usize) & chmsk;
+
+        while tos > 0 {
+            moves[mvcount] = (from, tos.blsi(), 6 + board::color(), 0);
+            mvcount += 1;
+            tos ^= tos.blsi();
+        }
+        rooks ^= rooks.blsi();
+    }
+    while prooks > 0 {
+        from = prooks.blsi();
+
+        tos = rook_bbmoves(from.trailing_zeros() as usize) & chmsk & pndmsk(from);
+
+        while tos > 0 {
+            moves[mvcount] = (from, tos.blsi(), 6 + board::color(), 0);
+            mvcount += 1;
+            tos ^= tos.blsi();
+        }
+        prooks ^= prooks.blsi();
+    }
+
+    // Get the queen moves
+    let mut queens: u64 = board::get_bitboard(8 + board::color()) & !pnmsk;
+    let mut pqueens: u64 = board::get_bitboard(8 + board::color()) & pnmsk;
+    while queens > 0 {
+        from = queens.blsi();
+
+        tos = queen_bbmoves(from.trailing_zeros() as usize) & chmsk;
+
+        while tos > 0 {
+            moves[mvcount] = (from, tos.blsi(), 8 + board::color(), 0);
+            mvcount += 1;
+            tos ^= tos.blsi();
+        }
+        queens ^= queens.blsi();
+    }
+    while pqueens > 0 {
+        from = pqueens.blsi();
+
+        tos = queen_bbmoves(from.trailing_zeros() as usize) & chmsk & pndmsk(from);
+        //board::print_bb(tos);
+
+        while tos > 0 {
+            moves[mvcount] = (from, tos.blsi(), 8 + board::color(), 0);
+            mvcount += 1;
+            tos ^= tos.blsi();
+        }
+        pqueens ^= pqueens.blsi();
+    }
+    // Get enemy attacks
+    let atks: u64 = attacked_squares();
+
+    // Get the king moves
+    let king: u64 = board::get_bitboard(10 + board::color());
+
+    tos = king_bbmoves(king.trailing_zeros() as usize) & !atks;
+    while tos > 0 {
+        moves[mvcount] = (king, tos.blsi(), 10 + board::color(),0);
+        mvcount += 1;
+
+        tos ^= tos.blsi();
+    }
+    // Castling
+
+    if (board::get_bitboard(14) & 0b1000 > 0) & (( board::get_bitboard(12) | board::get_bitboard(13) ) & (0b0110) == 0) & (board::color() == 0) {
+        // Make sure it isn't going through check
+        if 14 & atks == 0 {
+            moves[mvcount] = (8, 2, 10, 7);
+            mvcount += 1;
+        }
+    }
+
+
+    if (board::get_bitboard(14) & 0b0100 > 0) & (( board::get_bitboard(12) | board::get_bitboard(13) ) & (0b01110000) == 0) & (board::color() == 0) {
+        // Make sure it isn't going through check
+        if 56 & atks == 0 {
+            moves[mvcount] = (8,32,10,8);
+            mvcount += 1;
+        }
+    }
+
+
+    if (board::get_bitboard(14) & 0b0010 > 0) & (( board::get_bitboard(12) | board::get_bitboard(13) ) & (0x600000000000000) == 0) & (board::color() == 1) {
+        // Make sure it isn't going through check
+        if 1008806316530991104 & atks == 0 {
+            moves[mvcount] = (0x800000000000000, 0x200000000000000, 11, 9);
+            mvcount += 1;
+        }
+    }
+
+    if (board::get_bitboard(14) & 0b0001 > 0) & (( board::get_bitboard(12) | board::get_bitboard(13) ) & (0x7000000000000000) == 0) & (board::color() == 1) {
+        // Make sure it isn't going through check
+        if 4035225266123964416 & atks == 0 {
+            moves[mvcount] = (0x800000000000000, 0x2000000000000000, 11, 10);
+            mvcount += 1;
+        }
+    }
+    return mvcount as i32;
+}
+
 pub fn attacked_squares() -> u64{
     let acol = (board::color() + 1) % 2;
     let mut atks: u64 = 0;

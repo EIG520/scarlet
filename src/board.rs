@@ -1,6 +1,6 @@
 pub use bitintr::*;
 pub use crate::moves;
-use std::{collections::HashSet, hash::Hash};
+use std::collections::HashSet;
 use lazy_static::lazy_static;
 use std::sync::Mutex;
 
@@ -231,6 +231,16 @@ pub fn is_50mr() -> bool {
     unsafe{BITBOARDS[15] >= 100}
 }
 
+pub fn state() -> i32 {
+    if is_repetition() | is_50mr() {
+        return 1;
+    }
+    if moves::legalmoves(&mut [(0 as u64,0 as u64,0 as usize,0 as usize);300]) == 0 {
+        if in_check() {return 2;}
+        return 1;
+    }
+    0
+}
 
 // Undo Move
 #[inline(always)]
@@ -240,6 +250,7 @@ pub fn undo() {
         BITBOARDS = PREV[POS];
         PREV_POSES.lock().unwrap().remove(&[BITBOARDS[0], BITBOARDS[1], BITBOARDS[2], BITBOARDS[3], BITBOARDS[4], BITBOARDS[5], BITBOARDS[6], BITBOARDS[7], BITBOARDS[8], BITBOARDS[9], BITBOARDS[10], BITBOARDS[11], BITBOARDS[12], BITBOARDS[13], BITBOARDS[14] /* Skip 15 */, BITBOARDS[16]]);
         
+        //BITBOARDS[15] -= 1;
         COLOR = (COLOR + 1) % 2;
     }
     
@@ -351,7 +362,10 @@ pub fn chess_to_square(square: String) -> usize {
 }
 
 #[inline(always)]
-pub fn chess_to_move(mv: String, pt: usize, flag: usize) -> (u64, u64, usize, usize){
+pub fn chess_to_move(mv: String) -> (u64, u64, usize, usize){
+    let pt = piece_on_sq(chess_to_square(String::from(&mv[0..2])));
+    let flag = move_flag(&mv);
+
     return (1 << chess_to_square(String::from(&mv[0..2])), 1 << chess_to_square(String::from(&mv[2..4])), pt, flag);
 }
 
@@ -410,76 +424,54 @@ pub fn print_bb(bitboard: u64) {
     println!();
 }
 
-// FEN loading
-// Unused though
-pub fn load_from_fen(fen: String) {
-    let flds:Vec<&str> = fen.split_whitespace().collect();
-    let mut pos: usize = 0;
-    
-    // Clear out bitboards
-    for i in 0..64 {
-        del_from_square(i);
-    }
-
-    // Set the pieces
-    for c in flds[0].chars() {
-        if c.is_digit(10) {
-            pos += c.to_digit(10).unwrap() as usize;
+pub fn piece_on_sq(square: usize) -> usize{
+    for i in 0..12 {
+        if 1_u64.wrapping_shl(square as u32) & get_bitboard(i) > 0 {
+            return i;
         }
-        else {
-            match c {
-                'P' =>  set_square(63 - pos, 0),
-                'p' =>  set_square(63 - pos, 1),
-                'N' =>  set_square(63 - pos, 2),
-                'n' =>  set_square(63 - pos, 3),
-                'B' =>  set_square(63 - pos, 4),
-                'b' =>  set_square(63 - pos, 5),
-                'R' =>  set_square(63 - pos, 6),
-                'r' =>  set_square(63 - pos, 7),
-                'Q' =>  set_square(63 - pos, 8),
-                'q' =>  set_square(63 - pos, 9),
-                'K' =>  set_square(63 - pos, 10),
-                'k' =>  set_square(63 - pos, 11),
-                // We can ignore /s 
-                '/' => {pos -= 1}
-                // If it's a space, we move on to the next part
-                ' ' => {break}
-                _ => panic!("Invalid FEN (or I made a bug)")
-            }
-            pos += 1;
+    }
+    0
+}
+
+pub fn move_flag(mv: &str) -> usize {
+    let mut flag = 0;
+
+    let from = chess_to_square(String::from(&mv[0..2]));
+    let to = 1 << chess_to_square(String::from(&mv[2..4])) as u64;
+
+    // en passant
+    let pt = piece_on_sq(chess_to_square(String::from(&mv[0..2])));
+    if pt == 0 {
+        if moves::wpawnep_bbmoves(from) & to > 0 {
+            flag = 1;
+        }
+    }
+    if pt == 1 {
+        if moves::bpawnep_bbmoves(from) & to > 0 {
+            flag = 2;
         }
     }
 
-    
-
-
-    // Side to move
-    if flds[1] == "w" {
-        unsafe {COLOR = 0;}
-    }
-    else {
-        unsafe {COLOR = 1;}
-    }
-
-    // Castling
-    let mut crs: u64 = 0;
-    for c in flds[2].chars() {
-        match c {
-            'K' => crs += 0b1000,
-            'Q' => crs += 0b0100,
-            'k' => crs += 0b0010,
-            'q' => crs += 0b0001,
+    // Promotions
+    if mv.len() == 5 {
+        match mv.chars().nth(4).unwrap() {
+            'n' => {flag = 3},
+            'b' => {flag = 4},
+            'r' => {flag = 5},
+            'q' => {flag = 6},
             _ => {}
         }
     }
-    unsafe {BITBOARDS[14] = crs}
 
-    // TODO: This (stinky)
-
-
-    // I do NOT feel like doing en passant square stuff rn
-
-    // Fifty move rule stuff
-
-    // Move number
+    // Castling
+    if pt == 10 || pt == 11 {
+        match mv {
+            "e1g1" => {flag = 7},
+            "e1c1" => {flag = 8},
+            "e8g8" => {flag = 9},
+            "e8c8" => {flag = 10},
+            _ => {}
+        }
+    }
+    flag
 }

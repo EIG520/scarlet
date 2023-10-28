@@ -72,7 +72,7 @@ pub fn perft(depth: i32, root: bool) -> u64{
     if depth == 0 {
         return 1;
     }
-    if board::is_50mr() { return 0; }
+
     let mut counter: u64 = 0;
     let mut i: usize = 0;
 
@@ -101,3 +101,14 @@ pub fn perft(depth: i32, root: bool) -> u64{
 
     return counter;
 }
+
+// pub fn sort_moves(arr: &mut [(u64,u64,usize,usize)]) {
+
+//     let mut scores = *arr.clone();
+
+//     for x in arr {
+//         // If all zero, break out of loop
+//         if x.0 | x.1 | x.2 as u64 | x.3 as u64 == 0 {break;}
+
+//     }
+// }
