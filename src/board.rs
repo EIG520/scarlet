@@ -260,6 +260,7 @@ pub fn reset_hist() {
     unsafe {
         PREV = [[0;17];10000];
         PREV_POSES.lock().unwrap().clear();
+        POS = 2;
     }
 }
 

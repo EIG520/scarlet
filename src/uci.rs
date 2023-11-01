@@ -1,39 +1,44 @@
 use std::collections::HashMap;
 use std::str::SplitWhitespace;
-//use std::time::Instant;
 
 pub use crate::board;
 pub use crate::moves;
 pub use crate::tools;
 pub use crate::monte;
 pub use crate::search;
+pub use crate::test;
+
+
 
 use self::board::chess_to_move;
 
 pub fn uci() {
     let mut line ;
-    loop {
+    for _ in 0..100000 {
         line = String::new();
         let _b = std::io::stdin().read_line(&mut line).unwrap();
 
-        if line.trim() == "quit" || line.trim() == "exit" {
-            return;
+        match line.trim() {
+            "isready" => {println!("readyok")},
+            "uci" => {println!("uciok")},
+            "exit" => {return},
+            "quit" => {return},
+            _ => {
+                run_uci(&line);
+            },
         }
-
-        run_uci(&line);
     }
 }
+
 
 pub fn run_uci(cmd: &String) {
     let mut flds = cmd.split_whitespace();
     
-    match flds.next().unwrap() {
-        "uci" => {println!("uciok");},
-        "ucinewgame" => {board::reset_hist();},
-        "isready" => {println!("readyok");},
-        "go" => {handle_go(flds, HashMap::new());},
-        "position" => {handle_position(flds);},
-        "d" => {board::print_bb(board::get_bitboard(13) | board::get_bitboard(12));},
+    match flds.next() {
+        Some("ucinewgame") => {board::reset_hist();},
+        Some("go") => {handle_go(flds, HashMap::new());},
+        Some("position") => {handle_position(flds);},
+        Some("d") => {board::print_bb(board::get_bitboard(13) | board::get_bitboard(12));},
         _ => {}
     }
 }
@@ -42,7 +47,6 @@ pub fn run_uci(cmd: &String) {
 fn handle_go(mut flds: SplitWhitespace<'_>, known_values: HashMap<&str, u128>) {
     let next = flds.next();
 
-    // Idk there's probably a better way to do it
     if next.is_none() {
         handle_best(0);
         return;

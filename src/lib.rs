@@ -5,3 +5,5 @@ pub mod uci;
 pub mod monte;
 pub mod search;
 pub mod eval;
+pub mod test;
+pub mod sorting;

@@ -1,6 +1,7 @@
 pub use crate::board;
 pub use crate::moves;
 pub use crate::eval;
+pub use crate::sorting;
 use std::time::Instant;
 
 static mut SEARCH_MS: u128 = 0;
@@ -12,25 +13,33 @@ static mut SEARCH_EVAL: i32 = 0;
 
 pub fn search(depth: i32, root: bool, mut alpha: i32, beta: i32, ply: i32, timer: Instant) -> i32{
     // Detect repetition
-    // Repetition goes by 2 in this instead of 3 for the sake of ease
+    // Repetition goes by 2 in this instead of 3
     // So don't do this in root
     if board::is_repetition() && !root {return 0;}
-    
-    // TODO: Qsearch
-    if depth == 0 {
-        return eval::evaluate();
-    }
 
     let qsearch: bool = depth <= 0;
 
     // Get all legal moves
     let mut mvs: [(u64, u64, usize, usize); 300] = [(0,0,0,0); 300];
     let mvcnt ;
+
+    // Qsearch
     if qsearch {
         mvcnt = moves::loudmoves(&mut mvs);
+
+        let stand_pat = eval::evaluate();
+
+        if stand_pat >= beta {
+            return beta;
+        }
+        if alpha < stand_pat {
+            alpha = stand_pat;
+        }
     } else {
         mvcnt = moves::legalmoves(&mut mvs);
     }
+
+    sorting::sort(&mut mvs);
 
     // Main Search
     let mut best = -99999999;
@@ -94,7 +103,7 @@ pub fn bestmove(search_time: u128) -> (u64, u64, usize, usize) {
     // Iterative Deepening
     let mut i = 1;
     loop {
-        search(i, true, -999999, 999999,0, timer);
+        search(i, true, -999999, 999999, 0, timer);
         println!("info depth {} score cp {} pv {}", i, unsafe { ROOT_EVAL }, unsafe { board::move_to_chess(ROOT_BEST_MOVE) });
 
         if unsafe {timer.elapsed().as_millis() >= SEARCH_MS || ROOT_EVAL > 500000} {
