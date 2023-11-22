@@ -12,7 +12,7 @@ overflow-checks = false
 lto = true
 panic = 'abort'
 incremental = false
-codegen-units = 16
+codegen-units = 1
 rpath = false
 
 [profile.dev]

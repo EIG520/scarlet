@@ -1,9 +1,16 @@
-pub use scarlet::board;
-pub use scarlet::moves;
-pub use scarlet::tools;
-pub use scarlet::uci;
-pub use scarlet::monte;
+pub use scarlet::board::*;
+pub use scarlet::search::*;
+use scarlet::uci::*;
+// use std::time::Instant;
 
-fn main() {
-    uci::uci();
+pub fn main() {
+    let mut uci: UciHandler = UciHandler::new();
+
+    // let now = Instant::now();
+
+    // let _ = test_movegen_on_suite("C:\\Users\\eguer\\OneDrive\\Desktop\\Chess\\scarlet\\src\\ethereal_suite.epd");
+
+    // println!("Elapsed time: {:?}", now.elapsed());
+
+    uci.uci();
 }
