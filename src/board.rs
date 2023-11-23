@@ -74,7 +74,7 @@ pub struct Move {
     pub flag: Flag,
 }
 impl Move {
-    pub fn null() -> Self {
+    pub const fn null() -> Self {
         Self {from: 0, to: 0, piece_type: WhitePawn, flag:NoFlag}
     }
 }
@@ -83,9 +83,10 @@ pub struct MoveList {
     pub moves: [Move; 300],
     pub pos: usize
 }
+const NULL300: [Move; 300] = [Move::null(); 300];
 impl MoveList {
     pub fn new() -> Self {
-        Self {moves: [Move::null(); 300], pos: 0}
+        Self {moves: NULL300, pos: 0}
     }
     pub fn push(&mut self, mv: Move) {
         self.moves[self.pos] = mv;
