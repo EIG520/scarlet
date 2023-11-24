@@ -219,7 +219,7 @@ impl Board {
         let pawns = self.get_bitboard(PieceType::WhitePawn.shiftedby(self.color())) & pinmask;
         match self.color() {
             Color::White => {bitloop!(pawns{
-                let bbmoves = self.wpawn_bbmoves(pawns.blsi().trailing_zeros() as usize) & checkmask & pinmask;
+                let bbmoves = self.wpawn_bbmoves_atk(pawns.blsi().trailing_zeros() as usize) & self.enemy_squares() & checkmask & pinmask;
                 if bbmoves & 0xFF000000000000FF > 0 {
                     bitloop!(bbmoves{
                         moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::KnightPromotion});
@@ -240,7 +240,7 @@ impl Board {
                 }
             });},
             Color::Black => {bitloop!(pawns{
-                let bbmoves = self.bpawn_bbmoves(pawns.blsi().trailing_zeros() as usize)& checkmask & pinmask;
+                let bbmoves = self.bpawn_bbmoves_atk(pawns.blsi().trailing_zeros() as usize) & self.enemy_squares() & checkmask & pinmask;
                 if bbmoves & 0xFF000000000000FF > 0 {
                     bitloop!(bbmoves{
                         moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::KnightPromotion});
