@@ -4,3 +4,5 @@ pub mod basic_moves;
 pub mod utils;
 pub mod uci;
 pub mod search;
+pub mod evaluate;
+pub mod sort;

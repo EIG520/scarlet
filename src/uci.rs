@@ -4,6 +4,7 @@ use std::str::SplitWhitespace;
 
 pub use crate::board::*;
 pub use crate::utils::*;
+pub use crate::search::*;
 
 use std::fs::File;
 use std::io::{self, BufRead};
@@ -57,11 +58,43 @@ impl UciHandler {
     }
 
     pub fn handle_go(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
-        let next = command.next();
+        let mut next = command.next();
 
-        match next {
-            Some("perft") => {self.handle_perft(command)},
+        while next.is_some() {
+            match next {
+                Some("perft") => {return self.handle_perft(command)},
+                Some("depth") => {return self.handle_depth(command)},
+                Some(name) if name == match self.board.color() {Color::White => "wtime", Color::Black => "btime"} => {return self.handle_time(command)}
+                _ => {}
+            }
+
+            next = command.next();
+        }
+
+        Ok(())
+    }
+    
+    pub fn handle_time(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
+        match command.next() {
+            Some(x) if x.parse::<u128>().is_ok() => {
+                let mut searcher: Searcher = Searcher::new(&mut self.board);
+                searcher.search_for_ms(x.parse::<u128>().unwrap() / 30);
+                Ok(())
+            },
             _ => {Err(())}
+        }
+    }
+
+    pub fn handle_depth(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
+
+        let next = command.next();
+        match next {
+            Some(a) if a.parse::<i32>().is_ok() => {
+                let mut searcher: Searcher = Searcher::new(&mut self.board);
+                println!("{}",move_to_chess(searcher.search_to_depth(a.parse::<i32>().unwrap())));
+                Ok(())
+            }
+            _ => Err(()),
         }
     }
 
@@ -84,9 +117,87 @@ impl UciHandler {
 
         match next {
             Some("fen") => self.handle_fen(command),
-            Some("startpos") => Err(()),
+            Some("startpos") => self.handle_startpos(command),
             _ => Err(()),
         }
+    }
+    pub fn handle_startpos(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()>{
+        let mut pos: usize = 0;
+    
+        // Clear out bitboards
+        self.board.clear();
+    
+        let first = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
+    
+        // Set the pieces
+        for c in first.chars() {
+            if c.is_ascii_digit() {
+                pos += c.to_digit(10).unwrap() as usize;
+            }
+            else {
+                match c {
+                    'P' =>  self.board.add_to_square(63 - pos, PieceType::WhitePawn),
+                    'p' =>  self.board.add_to_square(63 - pos, PieceType::BlackPawn),
+                    'N' =>  self.board.add_to_square(63 - pos, PieceType::WhiteKnight),
+                    'n' =>  self.board.add_to_square(63 - pos, PieceType::BlackKnight),
+                    'B' =>  self.board.add_to_square(63 - pos, PieceType::WhiteBishop),
+                    'b' =>  self.board.add_to_square(63 - pos, PieceType::BlackBishop),
+                    'R' =>  self.board.add_to_square(63 - pos, PieceType::WhiteRook),
+                    'r' =>  self.board.add_to_square(63 - pos, PieceType::BlackRook),
+                    'Q' =>  self.board.add_to_square(63 - pos, PieceType::WhiteQueen),
+                    'q' =>  self.board.add_to_square(63 - pos, PieceType::BlackQueen),
+                    'K' =>  self.board.add_to_square(63 - pos, PieceType::WhiteKing),
+                    'k' =>  self.board.add_to_square(63 - pos, PieceType::BlackKing),
+                    // We can ignore /s 
+                    '/' => {pos -= 1}
+                    // If it's a space, we move on to the next part
+                    ' ' => {break}
+                    _ => {return Err(())}
+                }
+                pos += 1;
+            }
+        }
+    
+        // Side to move
+        self.board.set_color(Color::White);
+    
+        // Castling
+        let mut crs: u64 = 0;
+        for c in "KQkq".chars() {
+            match c {
+                'K' => crs += 0b1000,
+                'Q' => crs += 0b0100,
+                'k' => crs += 0b0010,
+                'q' => crs += 0b0001,
+                '-' => {},
+                _ => {return Err(());}
+            }
+        }
+        
+        self.board.set_bitboard(PieceType::CastleRights, crs);
+    
+        // En passant target square
+        let ep = chess_to_square("-".to_string());
+        // If chest_to_square returns something > 64, then it is invalid
+        // or _ and should mean that the ep bitboard is set to 0
+        if ep > 64 {
+            self.board.set_bitboard(PieceType::EnPassant, 0);
+        } else {
+            self.board.set_bitboard(PieceType::EnPassant, 1 << ep);
+        }
+
+        self.board.set_move_count(0);
+
+        match command.next() {
+            Some("moves") => {
+                let mv = command.next();
+                self.handle_moves(command, mv)
+            },
+            _ => {
+                Ok(())
+            }
+        }
+
     }
 
     pub fn handle_fen(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()>{
@@ -185,6 +296,8 @@ impl UciHandler {
 
 
 }
+
+
 
 // Return -1 if test passed, otherwise return depth it failed at
 pub fn test_movegen(fen: String, node_counts: Vec<i64>) -> Result<i32, ()>{

@@ -13,22 +13,28 @@ macro_rules! bitloop {
 pub(crate) use bitloop;
 
 impl Board {
-    pub fn gen_legal_moves(&mut self, moves: &mut MoveList){
+    pub fn gen_legal_moves(&mut self, moves: &mut MoveList, loud: bool){
         // Make some shared data
         self.gen_checkmask();
         self.gen_hit_squares();
         moves.clear();
 
         // Just call these three and bam
-        self.unpinned_legal_moves(moves);
-        self.rook_pinned_legal_moves(moves);
-        self.bishop_pinned_legal_moves(moves);
+
+        // set loudness
+        self.unpinned_legal_moves(moves, loud);
+        self.rook_pinned_legal_moves(moves, loud);
+        self.bishop_pinned_legal_moves(moves, loud);
     }
 
-    pub fn unpinned_legal_moves(&mut self, moves: &mut MoveList){
+    pub fn unpinned_legal_moves(&mut self, moves: &mut MoveList, loud: bool){
         // Checkmask
         let attacked_squares = self.attacked();
-        let checkmask = self.checkmask();
+
+        let mut checkmask = self.checkmask();
+        // All moves must go through the checkmask
+        // So get only loud moves all we have to do is and the checkmask with the opponent's color
+        if loud {checkmask &= self.get_bitboard(PieceType::WhitePieces.shiftedby(self.color().swapped()))};
 
         // Pinmasks
         let pinmask = self.rook_pinmask() | self.bishop_pinmask();
@@ -138,15 +144,16 @@ impl Board {
         }
     }
 
-    pub fn rook_pinned_legal_moves(&mut self, moves: &mut MoveList){
-        let checkmask = self.checkmask();
+    pub fn rook_pinned_legal_moves(&mut self, moves: &mut MoveList, loud: bool){
+        let mut checkmask = self.checkmask();
+        if loud {checkmask &= self.get_bitboard(PieceType::WhitePieces.shiftedby(self.color().swapped()))};
 
         let pinmask = self.rook_pinmask();
 
         let pawns = self.get_bitboard(PieceType::WhitePawn.shiftedby(self.color())) & pinmask;
         match self.color() {
             Color::White => {bitloop!(pawns{
-                let bbmoves = self.wpawn_bbmoves(pawns.blsi().trailing_zeros() as usize) & checkmask & pinmask;
+                let bbmoves = self.quiet_wpawn_bbmoves(pawns.blsi().trailing_zeros() as usize) & checkmask & pinmask;
                 if bbmoves & 0xFF000000000000FF > 0 {
                     bitloop!(bbmoves{
                         moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::KnightPromotion});
@@ -165,7 +172,7 @@ impl Board {
                 }
             });},
             Color::Black => {bitloop!(pawns{
-                let bbmoves = self.bpawn_bbmoves(pawns.blsi().trailing_zeros() as usize)& checkmask & pinmask;
+                let bbmoves = self.quiet_bpawn_bbmoves(pawns.blsi().trailing_zeros() as usize)& checkmask & pinmask;
                 if bbmoves & 0xFF000000000000FF > 0 {
                     bitloop!(bbmoves{
                         moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::KnightPromotion});
@@ -203,8 +210,9 @@ impl Board {
         });
     }
 
-    pub fn bishop_pinned_legal_moves(&mut self, moves: &mut MoveList) {
-        let checkmask = self.checkmask();
+    pub fn bishop_pinned_legal_moves(&mut self, moves: &mut MoveList, loud: bool) {
+        let mut checkmask = self.checkmask();
+        if loud {checkmask &= self.get_bitboard(PieceType::WhitePieces.shiftedby(self.color().swapped()))};
 
         let pinmask = self.bishop_pinmask();
 

@@ -127,6 +127,15 @@ impl Board {
         | ATK_BPMOVES[from] & self.enemy_squares()
     }
 
+    pub fn quiet_wpawn_bbmoves(&mut self, from:usize) -> u64 {
+        FLAT_WPMOVES[from] & self.true_open_squares()
+        | DOUB_WPMOVES[from] & (self.true_open_squares() << 8) & self.true_open_squares()
+    }
+    pub fn quiet_bpawn_bbmoves(&mut self, from:usize) -> u64 {
+        FLAT_BPMOVES[from] & self.true_open_squares()
+        | DOUB_BPMOVES[from] & (self.true_open_squares() >> 8) & self.true_open_squares()
+    }
+
     // Sliding Pieces
     pub fn rook_bbmoves(&mut self, from:usize) -> u64 {
         let main_bb: u64 = self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces);

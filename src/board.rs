@@ -50,7 +50,7 @@ impl Color {
     }
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, PartialEq)]
 pub enum Flag {
     #[default] 
     NoFlag,
@@ -66,7 +66,7 @@ pub enum Flag {
     BlackQueensideCastle,
 }
 // Move
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, PartialEq)]
 pub struct Move {
     pub from: u64,
     pub to: u64,
@@ -78,7 +78,6 @@ impl Move {
         Self {from: 0, to: 0, piece_type: WhitePawn, flag:NoFlag}
     }
 }
-
 pub struct MoveList {
     pub moves: [Move; 300],
     pub pos: usize
