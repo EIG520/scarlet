@@ -1,116 +1,197 @@
-pub use crate::board;
-pub use crate::moves;
-pub use crate::eval;
-pub use crate::sorting;
-use std::time::Instant;
+pub use crate::board::*;
+pub use crate::utils::*;
+pub use std::time::Instant;
 
-static mut SEARCH_MS: u128 = 0;
-
-static mut ROOT_BEST_MOVE: (u64, u64, usize, usize) = (0,0,0,0);
-static mut SEARCH_BEST_MOVE: (u64, u64, usize, usize) = (0,0,0,0);
-static mut ROOT_EVAL: i32 = 0;
-static mut SEARCH_EVAL: i32 = 0;
-
-pub fn search(depth: i32, root: bool, mut alpha: i32, beta: i32, ply: i32, timer: Instant) -> i32{
-    // Detect repetition
-    // Repetition goes by 2 in this instead of 3
-    // So don't do this in root
-    if board::is_repetition() && !root {return 0;}
-
-    let qsearch: bool = depth <= 0;
-
-    // Get all legal moves
-    let mut mvs: [(u64, u64, usize, usize); 300] = [(0,0,0,0); 300];
-    let mvcnt ;
-
-    // Qsearch
-    if qsearch {
-        mvcnt = moves::loudmoves(&mut mvs);
-
-        let stand_pat = eval::evaluate();
-
-        if stand_pat >= beta {
-            return beta;
+impl Board {
+    pub fn perft(&mut self, depth: u64) -> u64 {
+        if depth == 0 {
+            return 1;
         }
-        if alpha < stand_pat {
-            alpha = stand_pat;
+
+        
+        let mut moves = MoveList::new();
+        self.gen_legal_moves(&mut moves, false);
+
+        let mut count: u64 = 0;
+
+        for i in 0..moves.pos {
+            let mv = moves.moves[i];
+            
+            self.make_move(&mv);
+
+            let subcount = self.sub_perft(depth - 1);
+
+            self.undo();
+
+            count += subcount;
+            
+            println!("{}: {}", move_to_chess(mv), subcount);
         }
-    } else {
-        mvcnt = moves::legalmoves(&mut mvs);
+        println!("nodes: {}", count);
+        count
     }
-
-    sorting::sort(&mut mvs);
-
-    // Main Search
-    let mut best = -99999999;
-
-    for i in 0..mvcnt {
-
-        if timer.elapsed().as_millis() >= unsafe {SEARCH_MS} && depth > 2{
-            return 99999999;
+    pub fn sub_perft(&mut self, depth: u64) -> u64 {
+        if depth == 0 {
+            return 1;
         }
 
-        let mv = mvs[i as usize];
+        let mut moves = MoveList::new();
+        self.gen_legal_moves(&mut moves, false);
 
-        board::movebb(mv.0, mv.1, mv.2, mv.3);
-
-        let eval = -search(depth-1, false, -beta, -alpha, ply+1, timer);
-        board::undo();
-
-        if eval > best {
-            best = eval;
-
-            unsafe {
-                if root { SEARCH_BEST_MOVE = mv;SEARCH_EVAL=eval }
-            }
-
-            // Alpha beta pruning (~gazillion elo)
-            if eval > alpha {alpha = eval;}
-            if alpha >= beta {break;}
+        if depth == 1 {
+            return moves.pos as u64;
         }
+
+        let mut count: u64 = 0;
+
+        for i in 0..moves.pos {
+            let mv = moves.moves[i];
+            
+            self.make_move(&mv);
+            
+            count += self.sub_perft(depth - 1);
+
+            self.undo();
+        }
+        count
     }
-
-    if root {
-        unsafe {
-            ROOT_BEST_MOVE = SEARCH_BEST_MOVE;
-            ROOT_EVAL = SEARCH_EVAL;
-        }
-    }
-
-    if mvcnt == 0 {
-        if qsearch {
-            return eval::evaluate();
-        }
-        if board::in_check() {
-            return ply - 999999;
-        }
-        return 0;
-    }
-    best
 }
 
-pub fn bestmove(search_time: u128) -> (u64, u64, usize, usize) {
-    // Do time stuff
-    let timer = Instant::now();
-    unsafe {
-        SEARCH_MS = search_time;
-        // Set root eval to 0
-        // If we keep it, there's a bug with mate
-        ROOT_EVAL = 0;
-    };
+pub struct Searcher<'a> {
+    board: &'a mut Board,
+    root_best: Move,
+    search_best: Move,
+    root_best_eval: i32,
+    search_best_eval: i32,
+    search_ms: u128,
+    nodes: u128,
+}
 
-
-    // Iterative Deepening
-    let mut i = 1;
-    loop {
-        search(i, true, -999999, 999999, 0, timer);
-        println!("info depth {} score cp {} pv {}", i, unsafe { ROOT_EVAL }, unsafe { board::move_to_chess(ROOT_BEST_MOVE) });
-
-        if unsafe {timer.elapsed().as_millis() >= SEARCH_MS || ROOT_EVAL > 500000} {
-            break;
+impl<'a> Searcher<'a> {
+    pub fn new(board: &'a mut Board) -> Self {
+        Self {
+            board: board,
+            root_best: Move::null(),
+            search_best: Move::null(),
+            root_best_eval: -99999,
+            search_best_eval: -99999,
+            search_ms: 0,
+            nodes: 0,
         }
-        i += 1;
-
     }
-    unsafe { ROOT_BEST_MOVE }
+
+    pub fn search(&mut self, depth: i32, mut alpha: i32, beta: i32, ply: u32, timer:Instant) -> i32 {
+        self.nodes += 1;
+        // Detect repetition
+        // Repetition goes by 2 in this instead of 3
+        // So don't do this in root
+        // if board::is_repetition() && !root {return 0;}
+        let root: bool = ply == 0;
+        let qsearch: bool = depth <= 0;
+
+        // Get all legal moves
+        let mut mvs: MoveList = MoveList::new();
+
+        // Qsearch
+        if qsearch {
+            self.board.gen_legal_moves(&mut mvs, true);
+
+            let stand_pat = self.board.evaluate();
+
+            if stand_pat >= beta {
+                return beta;
+            }
+            if alpha < stand_pat {
+                alpha = stand_pat;
+            }
+        } else {
+            self.board.gen_legal_moves(&mut mvs, false);
+        }
+
+        self.board.sort(&mut mvs);
+
+        // Main Search
+        let mut best = -99999999;
+
+        for i in 0..mvs.pos {
+
+            if timer.elapsed().as_millis() >= self.search_ms && depth > 2 && self.search_ms != 0 {
+                return 99999999;
+            }
+
+            let mv = mvs.moves[i as usize];
+
+            self.board.make_move(&mv);
+
+            let eval = -self.search(depth-1,  -beta, -alpha, ply + 1, timer);
+            
+            self.board.undo();
+
+            if eval > best {
+                best = eval;
+
+                if root {
+                    self.search_best = mv;
+                    self.search_best_eval = eval;
+                }
+
+                // Alpha beta pruning (~gazillion elo)
+                if eval > alpha {alpha = eval;}
+                if alpha >= beta {break;}
+            }
+        }
+
+        if root && self.search_ms < timer.elapsed().as_millis() || self.search_best_eval > self.root_best_eval {
+            self.root_best = self.search_best;
+            self.root_best_eval = self.search_best_eval;
+        }
+
+        if mvs.pos == 0 {
+            if qsearch {
+                return self.board.evaluate();
+            }
+            // in check & no moves = mate
+            if self.board.checkmask() != u64::MAX {
+                return ply as i32 - 999999;
+            }
+            return 0;
+        }
+        best
+    }
+
+    pub fn search_to_depth(&mut self, depth: i32) -> Move {
+        self.search_ms = 0;
+        self.root_best_eval = -999999;
+        self.search_best_eval = -999999;
+        self.nodes = 0;
+
+        let timer = Instant::now();
+
+        self.search(depth, -999999, 999999, 0, timer);
+
+        println!("info depth {} nodes {} nps {}", depth, self.nodes, 1000 * self.nodes / timer.elapsed().as_millis());
+
+        self.root_best
+    }
+
+    pub fn search_for_ms(&mut self, ms: u128) -> Move {
+        self.search_ms = ms;
+        self.root_best_eval = -999999;
+        self.search_best_eval = -999999;
+        self.nodes = 0;
+        let timer = Instant::now();
+
+        let mut depth = 0;
+        while timer.elapsed().as_millis() < self.search_ms {
+            depth += 1;
+
+            self.search(depth, -999999, 999999, 0, timer);
+            
+            if timer.elapsed().as_millis() > 0 {
+                println!("info depth {} nodes {} nps {} score cp {} pv {} time {}", depth, self.nodes, 1000 * self.nodes / timer.elapsed().as_millis(), self.root_best_eval, move_to_chess(self.root_best), timer.elapsed().as_millis());
+            }
+        }
+        println!("bestmove {}", move_to_chess(self.root_best));
+        self.root_best
+    }
 }

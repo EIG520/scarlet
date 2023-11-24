@@ -1,9 +1,8 @@
-pub mod board;
 pub mod moves;
-pub mod tools;
+pub mod board;
+pub mod basic_moves;
+pub mod utils;
 pub mod uci;
-pub mod monte;
 pub mod search;
-pub mod eval;
-pub mod test;
-pub mod sorting;
+pub mod evaluate;
+pub mod sort;

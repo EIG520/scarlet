@@ -1,11 +1,9 @@
-pub use crate::moves;
-pub use crate::board;
-use bitintr::*;
+pub use crate::board::*;
 
-static MG_PV: [i32; 6] = [82, 337, 365, 477, 1025, 0];
-static EG_PV: [i32; 6] = [94, 281, 297, 512,  936, 0];
+const MG_PV: [i32; 6] = [82, 337, 365, 477, 1025, 0];
+const EG_PV: [i32; 6] = [94, 281, 297, 512,  936, 0];
 
-static EVAL_TABLES: [[i32; 64]; 12] = [[0,   0,   0,   0,   0,   0,  0,   0,
+const EVAL_TABLES: [[i32; 64]; 12] = [[0,   0,   0,   0,   0,   0,  0,   0,
 98, 134,  61,  95,  68, 126, 34, -11,
 -6,   7,  26,  31,  65,  56, 25, -20,
 -14,  13,   6,  21,  23,  12, 17, -23,
@@ -107,42 +105,44 @@ static EVAL_TABLES: [[i32; 64]; 12] = [[0,   0,   0,   0,   0,   0,  0,   0,
 -27, -11,   4,  13,  14,   4,  -5, -17,
 -53, -34, -21, -11, -28, -14, -24, -43]];
 
-pub fn evaluate() -> i32 {
-    let mut eg_eval = 0;
-    let mut mg_eval = 0;
+impl Board {
+    pub fn evaluate(&self) -> i32 {
+        let mut eg_eval = 0;
+        let mut mg_eval = 0;
 
-    // Account for kings
-    // I could just have a phase table but shut up
-    let mut phase: i32 = -12;
+        // Account for kings
+        // I could just have a phase table but shut up
+        let mut phase: i32 = -12;
 
-    for i in 0..6 {
-        let mut bb = board::get_bitboard(2*i);
-        while bb > 0 {
-            let pos = bb.blsi().trailing_zeros() ^ 7;
+        for i in 0..6 {
+            let mut bb = self.get_bitboard(num_to_piece(2*i));
+            while bb > 0 {
+                let pos = bb.blsi().trailing_zeros() ^ 7;
 
-            mg_eval += EVAL_TABLES[2*i][(pos ^ 56) as usize] + MG_PV[i];
+                mg_eval += EVAL_TABLES[2*i][(pos ^ 56) as usize] + MG_PV[i];
 
-            eg_eval += EVAL_TABLES[2*i+1][(pos ^ 56) as usize] + EG_PV[i];
+                eg_eval += EVAL_TABLES[2*i+1][(pos ^ 56) as usize] + EG_PV[i];
 
-            phase += i as i32;
+                phase += i as i32;
 
 
-            bb = bb & bb-1;
+                bb = bb & bb-1;
+            }
+            let mut bb = self.get_bitboard(num_to_piece(2*i+1));
+            while bb > 0 {
+                let pos = bb.blsi().trailing_zeros() ^ 7;
+
+                mg_eval -= EVAL_TABLES[2*i][pos as usize] + MG_PV[i];
+                eg_eval -= EVAL_TABLES[2*i+1][pos as usize] + EG_PV[i];
+
+
+                phase += i as i32;
+
+
+                bb = bb & (bb-1);
+            }
+
         }
-        let mut bb = board::get_bitboard(2*i+1);
-        while bb > 0 {
-            let pos = bb.blsi().trailing_zeros() ^ 7;
-
-            mg_eval -= EVAL_TABLES[2*i][pos as usize] + MG_PV[i];
-            eg_eval -= EVAL_TABLES[2*i+1][pos as usize] + EG_PV[i];
-
-
-            phase += i as i32;
-
-
-            bb = bb & (bb-1);
-        }
-
+        -1 * (mg_eval * phase + eg_eval * (30 - phase)) / 30 * (self.color() as i32 * -2 + 1)
     }
-    (mg_eval * phase + eg_eval * (30 - phase)) / 30 * (board::color() as i32 * -2 + 1)
 }
