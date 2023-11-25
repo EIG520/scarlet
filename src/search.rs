@@ -8,7 +8,6 @@ impl Board {
             return 1;
         }
 
-        
         let mut moves = MoveList::new();
         self.gen_legal_moves(&mut moves, false);
 
@@ -85,9 +84,10 @@ impl<'a> Searcher<'a> {
         // Detect repetition
         // Repetition goes by 2 in this instead of 3
         // So don't do this in root
-        // if board::is_repetition() && !root {return 0;}
         let root: bool = ply == 0;
         let qsearch: bool = depth <= 0;
+
+        if self.board.is_repetition() && !root {return 0;}
 
         // Get all legal moves
         let mut mvs: MoveList = MoveList::new();
@@ -169,7 +169,7 @@ impl<'a> Searcher<'a> {
 
         self.search(depth, -999999, 999999, 0, timer);
 
-        println!("info depth {} nodes {} nps {}", depth, self.nodes, 1000 * self.nodes / timer.elapsed().as_millis());
+        println!("info depth {} nodes {} ", depth, self.nodes);
 
         self.root_best
     }

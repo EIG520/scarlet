@@ -1,6 +1,7 @@
-// Unfinished rework of board to use objects instead of global variables
+// FINISHED rework of board to use objects instead of global variables
 // And also to be less bloated and generally better
 pub use bitintr::*;
+pub use std::collections::HashSet;
 pub use crate::board;
 pub use crate::moves;
 pub use crate::utils::*;
@@ -97,6 +98,7 @@ impl MoveList {
 }
 
 // BoardState is just the pieces on the board
+#[derive(Copy, Clone)]
 pub struct BoardState {
     // Bitboards
     bitboards: [u64; 16],
@@ -117,14 +119,54 @@ impl BoardState {
             move_counter: self.move_counter
         }
     }
+    pub fn bitboards(&self) -> [u64; 16] {
+        self.bitboards
+    }
+}
+
+// Keeps track of repetitions
+pub struct RepetitionTracker {
+    hashset1: HashSet<u64>,
+    hashset2: HashSet<u64>,
+    is_draw: bool,
+}
+impl RepetitionTracker {
+    pub fn add(&mut self, key: u64) {
+        match (self.hashset1.contains(&key), self.hashset2.contains(&key)) {
+            (true, true) => {self.is_draw = true;},
+            (true, false) => {self.hashset2.insert(key);},
+            (false, true) => {},
+            (false, false) => {self.hashset1.insert(key);},
+        }
+    }
+    pub fn remove(&mut self, key: u64) {
+        match (self.hashset1.contains(&key), self.hashset2.contains(&key)) {
+            (true, true) => {self.is_draw = false;self.hashset2.remove(&key);},
+            (true, false) => {self.hashset1.remove(&key);},
+            (false, true) => {},
+            (false, false) => {},
+        }  
+    }
+    pub fn reset(&mut self) {
+        self.hashset1.clear();
+        self.hashset2.clear();
+        self.is_draw = false;
+    }
+    pub fn new() -> Self {
+        RepetitionTracker { hashset1: HashSet::new(), hashset2: HashSet::new(), is_draw: false }
+    }
+    pub fn is_repetition(&self) -> bool {
+        self.is_draw
+    }
 }
 
 // Board Keeps track of history
 pub struct Board {
     side_to_move: Color,
     state: BoardState,
-    // All past states of the board (used for 50 move rule mostly)
+    // All past states of the board
     history: Vec<BoardState>,
+    repetition_tracker: RepetitionTracker,
     // For movegen
     checkmask: u64,
     attacked: u64,
@@ -138,6 +180,7 @@ impl Board {
             side_to_move: Color::White,
             state: BoardState::new(),
             history: vec![],
+            repetition_tracker: RepetitionTracker::new(),
             checkmask: u64::MAX,
             attacked: 0,
         }
@@ -150,6 +193,9 @@ impl Board {
     }
     pub fn attacked(&mut self) -> u64 {
         self.attacked
+    }
+    pub fn state(&self) -> &BoardState {
+        &self.state
     }
 
     pub fn set_bitboard(&mut self, piece_type: PieceType, new_bitboard: u64) {
@@ -194,6 +240,10 @@ impl Board {
     pub fn add_to_square(&mut self, square: usize, piece_type: PieceType) {
         self.state.bitboards[piece_type as usize] |= 1 << square;
         self.state.bitboards[piece_type as usize % 2 + 12] |= 1 << square;
+    }
+
+    pub fn is_repetition(&self) -> bool {
+        self.repetition_tracker.is_repetition()
     }
 
     // Make a move
@@ -316,6 +366,7 @@ impl Board {
         if (self.state.bitboards[BlackKing as usize] & 0b0000100000000000000000000000000000000000000000000000000000000000) == 0 {
             self.state.bitboards[CastleRights as usize] &= 0b1100;
         }
+        self.repetition_tracker.add(self.zobrist_hash());
     }
 
     pub fn switch_color(&mut self) {
@@ -327,11 +378,13 @@ impl Board {
     }
 
     pub fn undo(&mut self) {
+        self.repetition_tracker.remove(self.zobrist_hash());
         self.state = self.history.pop().unwrap();
         self.switch_color();
     }
 
     pub fn reset_hist(&mut self) {
+        self.repetition_tracker.reset();
         self.history.clear();
     }
 
