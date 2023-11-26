@@ -167,6 +167,7 @@ pub struct Board {
     // All past states of the board
     history: Vec<BoardState>,
     repetition_tracker: RepetitionTracker,
+    pub zobrist_hash: u64,
     // For movegen
     checkmask: u64,
     attacked: u64,
@@ -182,6 +183,7 @@ impl Board {
             history: vec![],
             repetition_tracker: RepetitionTracker::new(),
             checkmask: u64::MAX,
+            zobrist_hash: 0,
             attacked: 0,
         }
     }
@@ -213,6 +215,9 @@ impl Board {
     }
     pub fn checkmask(&mut self) -> u64 {
         self.checkmask
+    }
+    pub fn repinfo(&self) {
+        println!("{:?}", self.repetition_tracker.hashset1);
     }
     // Remove from an entire square
     // Return true if any changes were made
@@ -366,7 +371,8 @@ impl Board {
         if (self.state.bitboards[BlackKing as usize] & 0b0000100000000000000000000000000000000000000000000000000000000000) == 0 {
             self.state.bitboards[CastleRights as usize] &= 0b1100;
         }
-        self.repetition_tracker.add(self.zobrist_hash());
+        self.update_zobrist_hash();
+        self.repetition_tracker.add(self.zobrist_hash);
     }
 
     pub fn switch_color(&mut self) {
@@ -378,7 +384,8 @@ impl Board {
     }
 
     pub fn undo(&mut self) {
-        self.repetition_tracker.remove(self.zobrist_hash());
+        self.update_zobrist_hash();
+        self.repetition_tracker.remove(self.zobrist_hash);
         self.state = self.history.pop().unwrap();
         self.switch_color();
     }

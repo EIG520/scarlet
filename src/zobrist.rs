@@ -21,8 +21,12 @@ impl BoardState {
     }
 }
 impl Board {
-    pub fn zobrist_hash(&self) -> u64 {
-        self.state().zobrist_hash(self.color())
+    pub fn gen_zobrist_hash(&mut self) {
+        self.zobrist_hash = self.state().zobrist_hash(self.color());
+    }
+    // TODO: incremental update
+    pub fn update_zobrist_hash(&mut self) {
+        self.zobrist_hash = self.state().zobrist_hash(self.color());
     }
 }
 

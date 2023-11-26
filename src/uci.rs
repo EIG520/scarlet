@@ -52,7 +52,7 @@ impl UciHandler {
             Some("go") => self.handle_go(command),
             Some("position") => self.handle_position(command),
 
-            Some("d") => {print_bb(self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces));println!("{}", self.board.zobrist_hash());Ok(())}
+            Some("d") => {print_bb(self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces));println!("{}", self.board.zobrist_hash);Ok(())}
             _ => Ok(())
         }
     }

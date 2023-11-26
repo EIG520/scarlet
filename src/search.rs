@@ -141,7 +141,7 @@ impl<'a> Searcher<'a> {
             }
         }
 
-        if root && self.search_ms < timer.elapsed().as_millis() || self.search_best_eval > self.root_best_eval {
+        if root && (self.search_ms < timer.elapsed().as_millis() || self.search_best_eval > self.root_best_eval) {
             self.root_best = self.search_best;
             self.root_best_eval = self.search_best_eval;
         }
@@ -170,6 +170,7 @@ impl<'a> Searcher<'a> {
         self.search(depth, -999999, 999999, 0, timer);
 
         println!("info depth {} nodes {} ", depth, self.nodes);
+        println!("bestmove {}", move_to_chess(self.root_best));
 
         self.root_best
     }
@@ -184,9 +185,7 @@ impl<'a> Searcher<'a> {
         let mut depth = 0;
         while timer.elapsed().as_millis() < self.search_ms {
             depth += 1;
-
             self.search(depth, -999999, 999999, 0, timer);
-            
             if timer.elapsed().as_millis() > 0 {
                 println!("info depth {} nodes {} nps {} score cp {} pv {} time {}", depth, self.nodes, 1000 * self.nodes / timer.elapsed().as_millis(), self.root_best_eval, move_to_chess(self.root_best), timer.elapsed().as_millis());
             }
