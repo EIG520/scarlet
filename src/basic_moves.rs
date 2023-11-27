@@ -139,6 +139,7 @@ impl Board {
     // Sliding Pieces
     pub fn rook_bbmoves(&mut self, from:usize) -> u64 {
         let main_bb: u64 = self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces);
+        // print_bb(main_bb);
 
         let mut right: u64 = main_bb;
         // Bitintr pext is slow

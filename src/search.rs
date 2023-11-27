@@ -96,7 +96,7 @@ impl<'a> Searcher<'a> {
         if qsearch {
             self.board.gen_legal_moves(&mut mvs, true);
 
-            let stand_pat = self.board.evaluate();
+            let stand_pat = self.board.eval();
 
             if stand_pat >= beta {
                 return beta;
@@ -148,7 +148,7 @@ impl<'a> Searcher<'a> {
 
         if mvs.pos == 0 {
             if qsearch {
-                return self.board.evaluate();
+                return self.board.eval();
             }
             // in check & no moves = mate
             if self.board.checkmask() != u64::MAX {

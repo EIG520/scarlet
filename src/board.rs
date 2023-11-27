@@ -102,7 +102,11 @@ impl MoveList {
 pub struct BoardState {
     // Bitboards
     bitboards: [u64; 16],
-    // 50 Move Rule Counter
+    zobrist_hash: u64,
+    mg_eval: i32,
+    eg_eval: i32,
+    phase: i32,
+    // 50 Move Rule Counter (unused)
     move_counter: u64,
 }
 
@@ -110,12 +114,20 @@ impl BoardState {
     pub fn new() -> Self {
         BoardState {
             bitboards:[65280, 71776119061217280, 66, 4755801206503243776, 36, 2594073385365405696, 129, 9295429630892703744, 16, 1152921504606846976, 8, 576460752303423488,65535, 18446462598732840960,0b1111,0,],
+            zobrist_hash:0,
+            mg_eval: 0,
+            eg_eval: 0,
+            phase: 0,
             move_counter:0,
         }
     }
     pub fn clone(&mut self) -> Self {
         BoardState {
             bitboards: self.bitboards,
+            zobrist_hash: self.zobrist_hash,
+            mg_eval: self.mg_eval,
+            eg_eval: self.eg_eval,
+            phase: self.phase,
             move_counter: self.move_counter
         }
     }
@@ -167,7 +179,6 @@ pub struct Board {
     // All past states of the board
     history: Vec<BoardState>,
     repetition_tracker: RepetitionTracker,
-    pub zobrist_hash: u64,
     // For movegen
     checkmask: u64,
     attacked: u64,
@@ -177,15 +188,16 @@ pub struct Board {
 impl Board {
     // Instantiate board
     pub fn new() -> Self {
-        Board {
+        let mut cur = Board {
             side_to_move: Color::White,
             state: BoardState::new(),
             history: vec![],
             repetition_tracker: RepetitionTracker::new(),
             checkmask: u64::MAX,
-            zobrist_hash: 0,
             attacked: 0,
-        }
+        };
+        cur.init();
+        cur
     }
     pub fn update_attacked(&mut self, update: u64) {
         self.attacked |= update;
@@ -198,6 +210,33 @@ impl Board {
     }
     pub fn state(&self) -> &BoardState {
         &self.state
+    }
+    pub fn zobrist_hash(&self) -> u64 {
+        self.state.zobrist_hash
+    }
+    pub fn set_zobrist_hash(&mut self, new_hash: u64) {
+        self.state.zobrist_hash = new_hash;
+    }
+    pub fn set_mg_eval(&mut self, new_eval: i32) {
+        self.state.mg_eval = new_eval;
+    }
+    pub fn set_eg_eval(&mut self, new_eval: i32) {
+        self.state.eg_eval = new_eval;
+    }
+    pub fn set_phase(&mut self, new_phase: i32) {
+        self.state.phase = new_phase;
+    }
+    pub fn mg_eval(&self) -> i32 {
+        self.state.mg_eval
+    }
+    pub fn eg_eval(&self) -> i32 {
+        self.state.eg_eval
+    }
+    pub fn phase(&self) -> i32 {
+        self.state.phase
+    }
+    pub fn eval(&mut self) -> i32 {
+        -1 * (self.state.mg_eval * self.state.phase + self.state.eg_eval * (30 - self.state.phase)) / 30 * (self.color() as i32 * -2 + 1)
     }
 
     pub fn set_bitboard(&mut self, piece_type: PieceType, new_bitboard: u64) {
@@ -224,6 +263,7 @@ impl Board {
     pub fn clear_square(&mut self, square: u64) -> bool {
         let saved = self.state.bitboards;
 
+        self.update_zobrist_hash_square(square);
         self.state.bitboards[WhitePawn as usize] &= !square;
         self.state.bitboards[BlackPawn as usize ] &= !square;
         self.state.bitboards[WhiteKnight as usize ] &= !square;
@@ -238,6 +278,7 @@ impl Board {
         self.state.bitboards[BlackKing as usize ] &= !square;
         self.state.bitboards[WhitePieces as usize ] &= !square;
         self.state.bitboards[BlackPieces as usize ] &= !square;
+        self.update_zobrist_hash_square(square);
 
         saved == self.state.bitboards
     }
@@ -256,7 +297,9 @@ impl Board {
         self.history.push(self.state.clone());
 
         self.state.move_counter += 1;
-        self.state.bitboards[EnPassant as usize ] = 0;
+
+        self.update_zobrist_hash_en_passant();
+        self.state.bitboards[EnPassant as usize] = 0;
 
         if mv.piece_type as i32 <= 1 {
             if mv.from == (mv.to << 16){
@@ -266,85 +309,163 @@ impl Board {
             }
             self.state.move_counter = 0;
         }
+        self.update_zobrist_hash_en_passant();
 
+        // self.evaluate();
+        // println!("{}", self.mg_eval());
 
         match mv.flag {
             NoFlag => {
                 // Reset move counter if attacking
-                self.state.move_counter *= !self.clear_square(mv.to) as u64;
+                if mv.to & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped())) > 0{
+                    self.update_eval_capture(num_to_piece(self.piece_on_sq(mv.to.trailing_zeros() as usize)), mv.to);
+                    self.state.move_counter = 0;
+                    self.clear_square(mv.to);
+                }
 
                 self.state.bitboards[mv.piece_type as usize ] ^= mv.from | mv.to;
+                self.update_zobrist_hash(mv.from, mv.piece_type);
+                self.update_zobrist_hash(mv.to, mv.piece_type);
+                self.update_eval(mv.piece_type, mv.from, mv.to);
+
                 self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^= mv.from | mv.to;
             }
             WhiteEnPassant => {
                 // Remove attacked pawn
-                self.state.bitboards[BlackPawn as usize] &= !(mv.to >> 8);
-                self.state.bitboards[BlackPieces as usize] &= !(mv.to >> 8);
+                self.state.bitboards[BlackPawn as usize] ^= mv.to >> 8;
+                self.state.bitboards[BlackPieces as usize] ^= mv.to >> 8;
+                self.update_zobrist_hash(mv.to >> 8, BlackPawn);
+                self.update_eval_capture(BlackPawn, mv.to >> 8);
 
                 // Move moving pawn
                 self.state.bitboards[WhitePawn as usize] ^= mv.to | mv.from;
                 self.state.bitboards[WhitePieces as usize] ^= mv.to | mv.from;
+                self.update_zobrist_hash(mv.to, WhitePawn);
+                self.update_zobrist_hash(mv.from, WhitePawn);
+                self.update_eval(mv.piece_type, mv.from, mv.to);
             }
             BlackEnPassant => {
-                self.state.bitboards[WhitePawn as usize] &= !(mv.to << 8);
-                self.state.bitboards[WhitePieces as usize] &= !(mv.to << 8);
+                self.state.bitboards[WhitePawn as usize] ^= mv.to << 8;
+                self.state.bitboards[WhitePieces as usize] ^= mv.to << 8;
+                self.update_zobrist_hash(mv.to << 8, WhitePawn);
+                self.update_eval_capture(WhitePawn, mv.to << 8);
 
                 self.state.bitboards[BlackPawn as usize] ^= mv.to | mv.from;
                 self.state.bitboards[BlackPieces as usize] ^= mv.to | mv.from;
+                self.update_zobrist_hash(mv.to, BlackPawn);
+                self.update_zobrist_hash(mv.from, BlackPawn);
+                self.update_eval(mv.piece_type, mv.from, mv.to);
             }
             KnightPromotion => {
                 // For capture + promote
-                self.clear_square(mv.to);
+                if mv.to & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped())) > 0{
+                    self.update_eval_capture(num_to_piece(self.piece_on_sq(mv.to.trailing_zeros() as usize)), mv.to);
+                    self.state.move_counter = 0;
+                    self.clear_square(mv.to);
+                }
                 // Piece changes
                 self.state.bitboards[mv.piece_type as usize] ^= mv.from;
                 self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^= mv.to | mv.from;
-                self.state.bitboards[WhiteKnight.shiftedby(self.color()) as usize] |= mv.to;
+                self.state.bitboards[WhiteKnight.shiftedby(self.color()) as usize] ^= mv.to;
+                self.update_zobrist_hash(mv.from, mv.piece_type);
+                self.update_zobrist_hash(mv.to, WhiteKnight.shiftedby(self.color()));
+                self.update_eval_promotion(WhiteKnight.shiftedby(self.color()), mv.from, mv.to);
             }
             BishopPromotion => {
                 // For capture + promote
-                self.clear_square(mv.to);
+                if mv.to & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped())) > 0{
+                    self.update_eval_capture(num_to_piece(self.piece_on_sq(mv.to.trailing_zeros() as usize)), mv.to);
+                    self.state.move_counter = 0;
+                    self.clear_square(mv.to);
+                }
                 // Piece changes
                 self.state.bitboards[mv.piece_type as usize] ^= mv.from;
                 self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^= mv.to | mv.from;
                 self.state.bitboards[WhiteBishop.shiftedby(self.color()) as usize] |= mv.to;
+                self.update_zobrist_hash(mv.from, mv.piece_type);
+                self.update_zobrist_hash(mv.to, WhiteBishop.shiftedby(self.color()));
+                self.update_eval_promotion(WhiteBishop.shiftedby(self.color()), mv.from, mv.to);
             }
             RookPromotion => {
                 // For capture + promote
-                self.clear_square(mv.to);
+                if mv.to & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped())) > 0{
+                    self.update_eval_capture(num_to_piece(self.piece_on_sq(mv.to.trailing_zeros() as usize)), mv.to);
+                    self.state.move_counter = 0;
+                    self.clear_square(mv.to);
+                }
                 // Piece changes
                 self.state.bitboards[mv.piece_type as usize] ^= mv.from;
-                self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^= mv.to | mv.from;
                 self.state.bitboards[WhiteRook.shiftedby(self.color()) as usize] |= mv.to;
+                self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^= mv.to | mv.from;
+                self.update_zobrist_hash(mv.from, mv.piece_type);
+                self.update_zobrist_hash(mv.to, WhiteRook.shiftedby(self.color()));
+                self.update_eval_promotion(WhiteRook.shiftedby(self.color()), mv.from, mv.to);
             }
             QueenPromotion => {
                 // For capture + promote
-                self.clear_square(mv.to);
+                if mv.to & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped())) > 0{
+                    self.update_eval_capture(num_to_piece(self.piece_on_sq(mv.to.trailing_zeros() as usize)), mv.to);
+                    self.state.move_counter = 0;
+                    self.clear_square(mv.to);
+                }
                 // Piece changes
                 self.state.bitboards[mv.piece_type as usize] ^= mv.from;
-                self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^= mv.to | mv.from;
                 self.state.bitboards[WhiteQueen.shiftedby(self.color()) as usize] |= mv.to;
+                self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^= mv.to | mv.from;
+                self.update_zobrist_hash(mv.from, mv.piece_type);
+                self.update_zobrist_hash(mv.to, WhiteQueen.shiftedby(self.color()));
+                self.update_eval_promotion(WhiteQueen.shiftedby(self.color()), mv.from, mv.to);
             }
             WhiteKingsideCastle => {
                 // Move King
                 self.state.bitboards[WhiteKing as usize] ^= mv.from | mv.to;
+                self.update_zobrist_hash(mv.from, WhiteKing);
+                self.update_zobrist_hash(mv.to, WhiteKing);
+                self.update_eval(WhiteKing, mv.from, mv.to);
+
                 // Move Rook
                 self.state.bitboards[WhiteRook as usize] ^= 5;
+                self.update_zobrist_hash(0b1, WhiteRook);
+                self.update_zobrist_hash(0b100, WhiteRook);
+                self.update_eval(WhiteRook, 0b1, 0b100);
+
                 // Set Color Bitboard
-                self.state.bitboards[WhitePieces as usize] ^= mv.from | mv.to | 5;
+                self.state.bitboards[WhitePieces as usize] ^= mv.from | mv.to | 5;                
             }
             WhiteQueensideCastle => {
                 self.state.bitboards[WhiteKing as usize] ^= mv.from | mv.to;
+                self.update_zobrist_hash(mv.from, WhiteKing);
+                self.update_zobrist_hash(mv.to, WhiteKing);
+                self.update_eval(WhiteKing, mv.from, mv.to);
+
                 self.state.bitboards[WhiteRook as usize] ^= 144;
+                self.update_zobrist_hash(0b10000, WhiteRook);
+                self.update_zobrist_hash(0b10000000, WhiteRook);
+                self.update_eval(WhiteRook, 0b10000000, 0b10000);
+
                 self.state.bitboards[WhitePieces as usize] ^= mv.from | mv.to | 144;
             }
             BlackKingsideCastle => {
                 self.state.bitboards[BlackKing as usize] ^= mv.from | mv.to;
+                self.update_zobrist_hash(mv.from, BlackKing);
+                self.update_zobrist_hash(mv.to, BlackKing);
+                self.update_eval(BlackKing, mv.from, mv.to);
+
                 self.state.bitboards[BlackRook as usize] ^= 0x500000000000000;
+                self.update_zobrist_hash(0b100000000000000000000000000000000000000000000000000000000, BlackRook);
+                self.update_zobrist_hash(0b10000000000000000000000000000000000000000000000000000000000, BlackRook);
+                self.update_eval(BlackRook, 0b100000000000000000000000000000000000000000000000000000000, 0b10000000000000000000000000000000000000000000000000000000000);
                 self.state.bitboards[BlackPieces as usize] ^= mv.from | mv.to | 0x500000000000000;
             }
             BlackQueensideCastle => {
                 self.state.bitboards[BlackKing as usize] ^= mv.from | mv.to;
+                self.update_zobrist_hash(mv.from, BlackKing);
+                self.update_zobrist_hash(mv.to, BlackKing);
+                self.update_eval(BlackKing, mv.from, mv.to);
                 self.state.bitboards[BlackRook as usize] ^= 0x9000000000000000;
+                self.update_zobrist_hash(0b1000000000000000000000000000000000000000000000000000000000000, BlackRook);
+                self.update_zobrist_hash(0b1000000000000000000000000000000000000000000000000000000000000000, BlackRook);
+                self.update_eval(BlackRook, 0b1000000000000000000000000000000000000000000000000000000000000000, 0b1000000000000000000000000000000000000000000000000000000000000);
                 self.state.bitboards[BlackPieces as usize] ^= mv.from | mv.to | 0x9000000000000000;
             }
         }
@@ -352,6 +473,7 @@ impl Board {
         self.switch_color();
 
         // Change Castling Rights
+        self.update_zobrist_hash_castle_rights();
         if (self.state.bitboards[WhiteRook as usize] & 1) == 0 {
             self.state.bitboards[CastleRights as usize] &= 0b0111;
         }
@@ -371,11 +493,23 @@ impl Board {
         if (self.state.bitboards[BlackKing as usize] & 0b0000100000000000000000000000000000000000000000000000000000000000) == 0 {
             self.state.bitboards[CastleRights as usize] &= 0b1100;
         }
-        self.update_zobrist_hash();
-        self.repetition_tracker.add(self.zobrist_hash);
+        self.update_zobrist_hash_castle_rights();
+
+        // let eval = self.mg_eval();
+        // self.evaluate();
+        // if eval != self.mg_eval() {
+        //     println!("{} {}", eval, self.mg_eval());
+        // }
+
+        self.repetition_tracker.add(self.zobrist_hash());
     }
 
     pub fn switch_color(&mut self) {
+        self.update_zobrist_color();
+        self.side_to_move = self.side_to_move.swapped();
+        self.update_zobrist_color();
+    }
+    pub fn switch_color_no_zobrist_change(&mut self) {
         self.side_to_move = self.side_to_move.swapped();
     }
 
@@ -383,11 +517,17 @@ impl Board {
         self.side_to_move = new_color;
     }
 
+    // british init???!?!?!!?!
+    pub fn init(&mut self) {
+        self.gen_zobrist_hash();
+        self.evaluate();
+        self.repetition_tracker.add(self.zobrist_hash());
+    }
+
     pub fn undo(&mut self) {
-        self.update_zobrist_hash();
-        self.repetition_tracker.remove(self.zobrist_hash);
+        self.repetition_tracker.remove(self.zobrist_hash());
         self.state = self.history.pop().unwrap();
-        self.switch_color();
+        self.switch_color_no_zobrist_change();
     }
 
     pub fn reset_hist(&mut self) {

@@ -7,6 +7,10 @@ impl BoardState {
 
         let bbs = self.bitboards();
         for i in 0..bbs.len() {
+            if num_to_piece(i) == PieceType::WhitePieces || num_to_piece(i) == PieceType::BlackPieces {
+                continue;
+            }
+
             let bb = bbs[i];
             bitloop!(bb{
                 hash ^= RANDS[64 * i + bb.trailing_zeros() as usize];
@@ -22,11 +26,32 @@ impl BoardState {
 }
 impl Board {
     pub fn gen_zobrist_hash(&mut self) {
-        self.zobrist_hash = self.state().zobrist_hash(self.color());
+        self.set_zobrist_hash(self.state().zobrist_hash(self.color()));
     }
-    // TODO: incremental update
-    pub fn update_zobrist_hash(&mut self) {
-        self.zobrist_hash = self.state().zobrist_hash(self.color());
+    pub fn update_zobrist_hash(&mut self, square: u64, piece_type: PieceType) {
+        self.set_zobrist_hash(self.zobrist_hash() ^ RANDS[(piece_type as usize) * 64 + square.trailing_zeros() as usize]);
+    }
+    pub fn update_zobrist_hash_square(&mut self, square: u64) {
+        for pt in PieceType::WhitePawn as usize..PieceType::BlackKing as usize {
+            if self.get_bitboard(num_to_piece(pt)) & square > 0 {
+                self.update_zobrist_hash(square, num_to_piece(pt));
+            }
+        }
+    }
+    pub fn update_zobrist_hash_castle_rights(&mut self) {
+        let bb = self.get_bitboard(PieceType::CastleRights);
+        bitloop!(bb {
+            self.set_zobrist_hash(self.zobrist_hash() ^ RANDS[64 * PieceType::CastleRights as usize + bb.trailing_zeros() as usize]);
+        });
+    }
+    pub fn update_zobrist_hash_en_passant(&mut self) {
+        let bb = self.get_bitboard(PieceType::EnPassant);
+        bitloop!(bb {
+            self.set_zobrist_hash(self.zobrist_hash() ^ RANDS[64 * PieceType::EnPassant as usize + bb.trailing_zeros() as usize]);
+        });
+    }
+    pub fn update_zobrist_color(&mut self) {
+        self.set_zobrist_hash(self.zobrist_hash() ^ RANDS[1025 - self.color() as usize])
     }
 }
 

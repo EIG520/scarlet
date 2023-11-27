@@ -106,7 +106,7 @@ const EVAL_TABLES: [[i32; 64]; 12] = [[0,   0,   0,   0,   0,   0,  0,   0,
 -53, -34, -21, -11, -28, -14, -24, -43]];
 
 impl Board {
-    pub fn evaluate(&self) -> i32 {
+    pub fn evaluate(&mut self) {
         let mut eg_eval = 0;
         let mut mg_eval = 0;
 
@@ -143,6 +143,62 @@ impl Board {
             }
 
         }
-        -1 * (mg_eval * phase + eg_eval * (30 - phase)) / 30 * (self.color() as i32 * -2 + 1)
+        self.set_eg_eval(eg_eval);
+        self.set_mg_eval(mg_eval);
+        self.set_phase(phase);
+    }
+    pub fn update_eval(&mut self, piece_type: PieceType, from: u64, to: u64) {
+        match self.color() {
+            Color::White => {
+                self.set_mg_eval(self.mg_eval() - EVAL_TABLES[piece_type as usize][from.trailing_zeros() as usize ^ 63]);
+                self.set_mg_eval(self.mg_eval() + EVAL_TABLES[piece_type as usize][to.trailing_zeros() as usize ^ 63]);
+                self.set_eg_eval(self.eg_eval() - EVAL_TABLES[piece_type as usize + 1][from.trailing_zeros() as usize ^ 63]);
+                self.set_eg_eval(self.eg_eval() + EVAL_TABLES[piece_type as usize + 1][to.trailing_zeros() as usize ^ 63]);
+
+            }
+            Color::Black => {
+                self.set_mg_eval(self.mg_eval() + EVAL_TABLES[piece_type as usize - 1][from.trailing_zeros() as usize ^ 7]);
+                self.set_mg_eval(self.mg_eval() - EVAL_TABLES[piece_type as usize - 1][to.trailing_zeros() as usize ^ 7]);
+                self.set_eg_eval(self.eg_eval() + EVAL_TABLES[piece_type as usize][from.trailing_zeros() as usize ^ 7]);
+                self.set_eg_eval(self.eg_eval() - EVAL_TABLES[piece_type as usize][to.trailing_zeros() as usize ^ 7]);
+            }
+        }
+    }
+    pub fn update_eval_capture(&mut self, piece_type: PieceType, square: u64) {
+        self.set_phase(self.phase() - piece_type as i32 / 2);
+
+        match self.color() {
+            Color::White => {
+                self.set_mg_eval(self.mg_eval() + EVAL_TABLES[piece_type as usize - 1][square.trailing_zeros() as usize ^ 7] + MG_PV[piece_type as usize / 2]);
+                self.set_eg_eval(self.eg_eval() + EVAL_TABLES[piece_type as usize][square.trailing_zeros() as usize ^ 7] + EG_PV[piece_type as usize / 2]);
+            }
+            Color::Black => {
+                self.set_mg_eval(self.mg_eval() - EVAL_TABLES[piece_type as usize][square.trailing_zeros() as usize ^ 63] - MG_PV[piece_type as usize / 2]);
+                self.set_eg_eval(self.eg_eval() - EVAL_TABLES[piece_type as usize + 1][square.trailing_zeros() as usize ^ 63] - EG_PV[piece_type as usize / 2]);
+            }
+        }
+    }
+    pub fn update_eval_promotion(&mut self, promotion_type: PieceType, from: u64, to: u64) {
+        self.set_phase(self.phase() + promotion_type as i32 / 2);
+        match self.color() {
+            Color::White => {
+                self.set_mg_eval(self.mg_eval() - EVAL_TABLES[PieceType::WhitePawn as usize][from.trailing_zeros() as usize ^ 63] - MG_PV[PieceType::WhitePawn as usize / 2]);
+                self.set_eg_eval(self.eg_eval() - EVAL_TABLES[PieceType::WhitePawn as usize + 1][from.trailing_zeros() as usize ^ 63] - EG_PV[PieceType::WhitePawn as usize / 2]);
+
+                self.set_mg_eval(self.mg_eval() + EVAL_TABLES[promotion_type as usize][to.trailing_zeros() as usize ^ 63] + MG_PV[promotion_type as usize / 2]);
+                self.set_eg_eval(self.eg_eval() + EVAL_TABLES[promotion_type as usize + 1][to.trailing_zeros() as usize ^  63] + EG_PV[promotion_type as usize / 2]);
+            }
+            Color::Black => {
+                self.set_mg_eval(self.mg_eval() + EVAL_TABLES[PieceType::BlackPawn as usize - 1][from.trailing_zeros() as usize ^ 7] + MG_PV[PieceType::BlackPawn as usize / 2]);
+                self.set_eg_eval(self.eg_eval() + EVAL_TABLES[PieceType::BlackPawn as usize][from.trailing_zeros() as usize ^ 7] + EG_PV[PieceType::BlackPawn as usize / 2]);
+                // println!("{}", EVAL_TABLES[PieceType::BlackPawn as usize - 1][from.trailing_zeros() as usize ^ 7]);
+                // println!("{}", from);
+
+
+
+                self.set_mg_eval(self.mg_eval() - EVAL_TABLES[promotion_type as usize - 1][to.trailing_zeros() as usize ^ 7] - MG_PV[promotion_type as usize / 2]);
+                self.set_eg_eval(self.eg_eval() - EVAL_TABLES[promotion_type as usize][to.trailing_zeros() as usize ^ 7] - EG_PV[promotion_type as usize / 2]);
+            }
+        }
     }
 }

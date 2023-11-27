@@ -52,7 +52,7 @@ impl UciHandler {
             Some("go") => self.handle_go(command),
             Some("position") => self.handle_position(command),
 
-            Some("d") => {print_bb(self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces));println!("{}", self.board.zobrist_hash);Ok(())}
+            Some("d") => {print_bb(self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces));println!("{}", self.board.zobrist_hash());println!("{}", self.board.eval());Ok(())}
             _ => Ok(())
         }
     }
@@ -188,6 +188,8 @@ impl UciHandler {
 
         self.board.set_move_count(0);
 
+        self.board.init();
+
         match command.next() {
             Some("moves") => {
                 let mv = command.next();
@@ -270,16 +272,16 @@ impl UciHandler {
         }
 
         match (command.next(), command.next()) {
-            (Some("moves"), m) => self.handle_moves(command, m),
+            (Some("moves"), m) => {self.board.init();self.handle_moves(command, m)},
             (Some(a), Some(b)) if a.parse::<u64>().is_ok() && b.parse::<u64>().is_ok() => {
                 self.board.set_move_count(b.parse::<u64>().unwrap());
                 command.next();
                 let f = command.next();
-
+                self.board.init();
                 self.handle_moves(command, f)
             },
-            (None, None) => Ok(()),
-            _ => Err(())
+            (None, None) => {self.board.init();Ok(())},
+            _ => {self.board.init();Err(())}
         }
     }
 
