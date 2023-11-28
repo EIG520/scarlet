@@ -141,7 +141,7 @@ impl<'a> Searcher<'a> {
             }
         }
 
-        if root && (self.search_ms < timer.elapsed().as_millis() || self.search_best_eval > self.root_best_eval) {
+        if root && (timer.elapsed().as_millis() < self.search_ms || self.search_best_eval > self.root_best_eval) {
             self.root_best = self.search_best;
             self.root_best_eval = self.search_best_eval;
         }

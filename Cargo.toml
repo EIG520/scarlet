@@ -5,7 +5,7 @@ edition = "2021"
 
 [profile.release]
 opt-level = 3
-debug = true
+debug = false
 split-debuginfo = '...'  # Platform-specific.
 debug-assertions = false
 overflow-checks = false

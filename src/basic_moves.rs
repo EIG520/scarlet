@@ -25,6 +25,38 @@ const BMOVES_UL: [u64; 64] = [0x8040201008040200,0x0080402010080400,0x0000804020
 const BMOVES_DR: [u64; 64] = [0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000001,0x0000000000000002,0x0000000000000004,0x0000000000000008,0x0000000000000010,0x0000000000000020,0x0000000000000040,0x0000000000000000,0x0000000000000100,0x0000000000000201,0x0000000000000402,0x0000000000000804,0x0000000000001008,0x0000000000002010,0x0000000000004020,0x0000000000000000,0x0000000000010000,0x0000000000020100,0x0000000000040201,0x0000000000080402,0x0000000000100804,0x0000000000201008,0x0000000000402010,0x0000000000000000,0x0000000001000000,0x0000000002010000,0x0000000004020100,0x0000000008040201,0x0000000010080402,0x0000000020100804,0x0000000040201008,0x0000000000000000,0x0000000100000000,0x0000000201000000,0x0000000402010000,0x0000000804020100,0x0000001008040201,0x0000002010080402,0x0000004020100804,0x0000000000000000,0x0000010000000000,0x0000020100000000,0x0000040201000000,0x0000080402010000,0x0000100804020100,0x0000201008040201,0x0000402010080402,0x0000000000000000,0x0001000000000000,0x0002010000000000,0x0004020100000000,0x0008040201000000,0x0010080402010000,0x0020100804020100,0x0040201008040201];
 const BMOVES_DL: [u64; 64] = [0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000000,0x0000000000000002,0x0000000000000004,0x0000000000000008,0x0000000000000010,0x0000000000000020,0x0000000000000040,0x0000000000000080,0x0000000000000000,0x0000000000000204,0x0000000000000408,0x0000000000000810,0x0000000000001020,0x0000000000002040,0x0000000000004080,0x0000000000008000,0x0000000000000000,0x0000000000020408,0x0000000000040810,0x0000000000081020,0x0000000000102040,0x0000000000204080,0x0000000000408000,0x0000000000800000,0x0000000000000000,0x0000000002040810,0x0000000004081020,0x0000000008102040,0x0000000010204080,0x0000000020408000,0x0000000040800000,0x0000000080000000,0x0000000000000000,0x0000000204081020,0x0000000408102040,0x0000000810204080,0x0000001020408000,0x0000002040800000,0x0000004080000000,0x0000008000000000,0x0000000000000000,0x0000020408102040,0x0000040810204080,0x0000081020408000,0x0000102040800000,0x0000204080000000,0x0000408000000000,0x0000800000000000,0x0000000000000000,0x0002040810204080,0x0004081020408000,0x0008102040800000,0x0010204080000000,0x0020408000000000,0x0040800000000000,0x0080000000000000,0x0000000000000000];
 
+const REV_BLSMSK_REV: [u64; 256] = gen_rbr();
+const REV_BLSR_BLSMSK_REV: [u64; 256] = gen_rbbr();
+
+const fn gen_rbr() -> [u64; 256] {
+    let mut cur: [u64; 256] = [0; 256];
+    let mut i: u64 = 0;
+    while i < 256 {
+        cur[i as usize] = (i.reverse_bits() ^ i.reverse_bits().wrapping_sub(1)).reverse_bits() as u64;
+        i += 1;
+    }
+    cur
+}
+const fn gen_rbbr() -> [u64; 256] {
+    let mut cur: [u64; 256] = [0; 256];
+    let mut i: u64 = 0;
+    while i < 256 {
+        cur[i as usize] = i.reverse_bits() & i.reverse_bits().wrapping_sub(1);
+        cur[i as usize] = cur[i as usize] ^ (cur[i as usize] - 1);
+        cur[i as usize] = cur[i as usize].reverse_bits();
+        (i.reverse_bits() & i.reverse_bits().wrapping_sub(1)).reverse_bits() as u64;
+        i += 1;
+    }
+    cur
+}
+
+pub fn rev_blsmsk_rev(x:u64) -> u64 {
+    REV_BLSMSK_REV[x as usize]
+}
+pub fn rev_blsr_blsmsk_rev(x: u64) -> u64 {
+    REV_BLSR_BLSMSK_REV[x as usize]
+}
+
 impl Board {
     // Functions to get open/closed squares
     pub fn open_squares(&self) -> u64 {
@@ -65,12 +97,12 @@ impl Board {
         let mut right: u64 = main_bb;
         // Bitintr pext is slow
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) right,b = in(reg) RMOVES_RIGHT[from])}
-        right = right.reverse_bits().blsmsk().reverse_bits();
+        right = rev_blsmsk_rev(right);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) right,b = in(reg) RMOVES_RIGHT[from])}
 
         let mut down: u64 = main_bb;
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) down,b = in(reg) RMOVES_DOWN[from])}
-        down = down.reverse_bits().blsmsk().reverse_bits();
+        down = rev_blsmsk_rev(down);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) down,b = in(reg) RMOVES_DOWN[from])}
 
         let mut left: u64 = main_bb;
@@ -92,12 +124,12 @@ impl Board {
 
         let mut down: u64 = main_bb;
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) down,b = in(reg) BMOVES_DR[from])}
-        down = down.reverse_bits().blsmsk().reverse_bits();
+        down = rev_blsmsk_rev(down);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) down,b = in(reg) BMOVES_DR[from])}
 
         let mut left: u64 = main_bb;
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) left,b = in(reg) BMOVES_DL[from])}
-        left = left.reverse_bits().blsmsk().reverse_bits();
+        left = rev_blsmsk_rev(left);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) left,b = in(reg) BMOVES_DL[from])}
 
         right | up | left | down
@@ -144,12 +176,12 @@ impl Board {
         let mut right: u64 = main_bb;
         // Bitintr pext is slow
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) right,b = in(reg) RMOVES_RIGHT[from])}
-        right = right.reverse_bits().blsmsk().reverse_bits();
+        right = rev_blsmsk_rev(right);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) right,b = in(reg) RMOVES_RIGHT[from])}
 
         let mut down: u64 = main_bb;
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) down,b = in(reg) RMOVES_DOWN[from])}
-        down = down.reverse_bits().blsmsk().reverse_bits();
+        down = rev_blsmsk_rev(down);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) down,b = in(reg) RMOVES_DOWN[from])}
 
         let mut left: u64 = main_bb;
@@ -170,12 +202,12 @@ impl Board {
 
         let mut down: u64 = main_bb;
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) down,b = in(reg) BMOVES_DR[from])}
-        down = down.reverse_bits().blsmsk().reverse_bits();
+        down = rev_blsmsk_rev(down);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) down,b = in(reg) BMOVES_DR[from])}
 
         let mut left: u64 = main_bb;
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) left,b = in(reg) BMOVES_DL[from])}
-        left = left.reverse_bits().blsmsk().reverse_bits();
+        left = rev_blsmsk_rev(left);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) left,b = in(reg) BMOVES_DL[from])}
 
         (right | up | left | down) & self.open_squares()
@@ -196,7 +228,7 @@ impl Board {
 
         let mut right: u64 = main_bb;
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) right,b = in(reg) RMOVES_RIGHT[from])}
-        right = right.reverse_bits().blsmsk().reverse_bits();
+        right = rev_blsmsk_rev(right);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) right,b = in(reg) RMOVES_RIGHT[from])}
         if right & rooks != 0 {self.update_checkmask(right)}
 
@@ -218,13 +250,13 @@ impl Board {
 
         let mut right: u64 = main_bb;
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) right,b = in(reg) RMOVES_RIGHT[from])}
-        right = (right.reverse_bits() & (right.reverse_bits() - 1)).blsmsk().reverse_bits();
+        right = rev_blsr_blsmsk_rev(right);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) right,b = in(reg) RMOVES_RIGHT[from])}
         if right & rooks == 0 {right = 0;}
 
         let mut down: u64 = main_bb;
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) down,b = in(reg) RMOVES_DOWN[from])}
-        down = (down.reverse_bits() & (down.reverse_bits() - 1)).blsmsk().reverse_bits();
+        down = rev_blsr_blsmsk_rev(down);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) down,b = in(reg) RMOVES_DOWN[from])}
         if down & rooks == 0 {down = 0;}
 
@@ -258,13 +290,13 @@ impl Board {
 
         let mut down: u64 = main_bb;
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) down,b = in(reg) BMOVES_DR[from])}
-        down = (down.reverse_bits() & (down.reverse_bits() - 1)).blsmsk().reverse_bits();
+        down = rev_blsr_blsmsk_rev(down);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) down,b = in(reg) BMOVES_DR[from])}
         if down & bishops == 0 {down = 0;}
 
         let mut left: u64 = main_bb;
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) left,b = in(reg) BMOVES_DL[from])}
-        left = (left.reverse_bits() & (left.reverse_bits() - 1)).blsmsk().reverse_bits();
+        left = rev_blsr_blsmsk_rev(left);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) left,b = in(reg) BMOVES_DL[from])}
 
         if left & bishops == 0 {left = 0;}
@@ -283,13 +315,13 @@ impl Board {
 
         let mut right: u64 = main_bb;
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) right,b = in(reg) RMOVES_RIGHT[from])}
-        right = right.reverse_bits().blsmsk().reverse_bits();
+        right = rev_blsmsk_rev(right);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) right,b = in(reg) RMOVES_RIGHT[from])}
         if right & rooks != 0 {self.update_checkmask(right)}
 
         let mut down: u64 = main_bb;
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) down,b = in(reg) RMOVES_DOWN[from])}
-        down = down.reverse_bits().blsmsk().reverse_bits();
+        down = rev_blsmsk_rev(down);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) down,b = in(reg) RMOVES_DOWN[from])}
         if down & rooks != 0 {self.update_checkmask(down)}
 
@@ -311,13 +343,13 @@ impl Board {
 
         let mut down: u64 = main_bb;
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) down,b = in(reg) BMOVES_DR[from])}
-        down = down.reverse_bits().blsmsk().reverse_bits();
+        down = rev_blsmsk_rev(down);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) down,b = in(reg) BMOVES_DR[from])}
         if down & bishops != 0 {self.update_checkmask(down)}
 
         let mut left: u64 = main_bb;
         unsafe {asm!("pext {a}, {a}, {b}",a = inout(reg) left,b = in(reg) BMOVES_DL[from])}
-        left = left.reverse_bits().blsmsk().reverse_bits();
+        left = rev_blsmsk_rev(left);
         unsafe {asm!("pdep {a}, {a}, {b}",a = inout(reg) left,b = in(reg) BMOVES_DL[from])}
         if left & bishops != 0 {self.update_checkmask(left)}
 
