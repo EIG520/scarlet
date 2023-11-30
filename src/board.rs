@@ -80,19 +80,22 @@ impl Move {
     }
 }
 pub struct MoveList {
-    pub moves: [Move; 300],
+    pub moves: Vec<Move>,
     pub pos: usize
 }
-const NULL300: [Move; 300] = [Move::null(); 300];
 impl MoveList {
-    pub fn new() -> Self {
-        Self {moves: NULL300, pos: 0}
+    pub fn default() -> Self {
+        Self {moves: Vec::with_capacity(100), pos: 0}
+    }
+    pub fn new(moves: Vec<Move>, len: usize) -> Self {
+        Self {moves: moves, pos: len}
     }
     pub fn push(&mut self, mv: Move) {
-        self.moves[self.pos] = mv;
+        self.moves.push(mv);
         self.pos += 1;
     }
     pub fn clear(&mut self) {
+        self.moves.clear();
         self.pos = 0;
     }
 }

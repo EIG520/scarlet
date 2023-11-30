@@ -8,7 +8,7 @@ impl Board {
             return 1;
         }
 
-        let mut moves = MoveList::new();
+        let mut moves = MoveList::default();
         self.gen_legal_moves(&mut moves, false);
 
         let mut count: u64 = 0;
@@ -34,7 +34,7 @@ impl Board {
             return 1;
         }
 
-        let mut moves = MoveList::new();
+        let mut moves = MoveList::default();
         self.gen_legal_moves(&mut moves, false);
 
         if depth == 1 {
@@ -90,7 +90,7 @@ impl<'a> Searcher<'a> {
         if self.board.is_repetition() && !root {return 0;}
 
         // Get all legal moves
-        let mut mvs: MoveList = MoveList::new();
+        let mut mvs: MoveList = MoveList::default();
 
         // Qsearch
         if qsearch {
