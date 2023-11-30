@@ -2,7 +2,7 @@ pub use crate::board::*;
 
 impl Board {
     pub fn sort(&mut self, mvs: &mut MoveList) {
-        mvs.moves.sort_by(|&a, &b| self.value(b).cmp(&self.value(a)))
+        mvs.moves.sort_by_key(|&a| -self.value(a))
     }
     pub fn value(&self, mv: Move) -> i32 {
         // Push all unfilled moves to the back
