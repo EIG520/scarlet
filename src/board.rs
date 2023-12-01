@@ -1,7 +1,8 @@
 // FINISHED rework of board to use objects instead of global variables
 // And also to be less bloated and generally better
 pub use bitintr::*;
-pub use std::collections::HashSet;
+pub use fxhash::FxHashSet;
+
 pub use crate::board;
 pub use crate::moves;
 pub use crate::utils::*;
@@ -141,8 +142,8 @@ impl BoardState {
 
 // Keeps track of repetitions
 pub struct RepetitionTracker {
-    hashset1: HashSet<u64>,
-    hashset2: HashSet<u64>,
+    hashset1: FxHashSet<u64>,
+    hashset2: FxHashSet<u64>,
     is_draw: bool,
 }
 impl RepetitionTracker {
@@ -168,7 +169,7 @@ impl RepetitionTracker {
         self.is_draw = false;
     }
     pub fn new() -> Self {
-        RepetitionTracker { hashset1: HashSet::new(), hashset2: HashSet::new(), is_draw: false }
+        RepetitionTracker { hashset1: FxHashSet::default(), hashset2: FxHashSet::default(), is_draw: false }
     }
     pub fn is_repetition(&self) -> bool {
         self.is_draw

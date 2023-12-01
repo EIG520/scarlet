@@ -89,13 +89,11 @@ impl<'a> Searcher<'a> {
 
         if self.board.is_repetition() && !root {return 0;}
 
-        // Get all legal moves
+        // Initialize legal moves list
         let mut mvs: MoveList = MoveList::default();
 
         // Qsearch
         if qsearch {
-            self.board.gen_legal_moves(&mut mvs, true);
-
             let stand_pat = self.board.eval();
 
             if stand_pat >= beta {
@@ -104,6 +102,7 @@ impl<'a> Searcher<'a> {
             if alpha < stand_pat {
                 alpha = stand_pat;
             }
+            self.board.gen_legal_moves(&mut mvs, true);
         } else {
             self.board.gen_legal_moves(&mut mvs, false);
         }
@@ -135,7 +134,7 @@ impl<'a> Searcher<'a> {
                     self.search_best_eval = eval;
                 }
 
-                // Alpha beta pruning (~gazillion elo)
+                // Alpha beta pruning
                 if eval > alpha {alpha = eval;}
                 if alpha >= beta {break;}
             }

@@ -32,4 +32,5 @@ rpath = false
 
 [dependencies]
 bitintr = "0.3.0"
+fxhash = "0.2.1"
 lazy_static = "1.4.0"
