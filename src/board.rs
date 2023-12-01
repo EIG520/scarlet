@@ -85,11 +85,8 @@ pub struct MoveList {
     pub pos: usize
 }
 impl MoveList {
-    pub fn default() -> Self {
-        Self {moves: Vec::with_capacity(100), pos: 0}
-    }
     pub fn new(moves: Vec<Move>, len: usize) -> Self {
-        Self {moves: moves, pos: len}
+        Self {moves, pos: len}
     }
     pub fn push(&mut self, mv: Move) {
         self.moves.push(mv);
@@ -98,6 +95,11 @@ impl MoveList {
     pub fn clear(&mut self) {
         self.moves.clear();
         self.pos = 0;
+    }
+}
+impl Default for MoveList {
+    fn default() -> Self {
+        Self {moves: Vec::with_capacity(100), pos: 0}
     }
 }
 
@@ -298,7 +300,7 @@ impl Board {
 
     // Make a move
     pub fn make_move(&mut self, mv: &Move) {
-        self.history.push(self.state.clone());
+        self.history.push(self.state);
 
         self.state.move_counter += 1;
 

@@ -44,7 +44,6 @@ const fn gen_rbbr() -> [u64; 256] {
         cur[i as usize] = i.reverse_bits() & i.reverse_bits().wrapping_sub(1);
         cur[i as usize] = cur[i as usize] ^ (cur[i as usize] - 1);
         cur[i as usize] = cur[i as usize].reverse_bits();
-        (i.reverse_bits() & i.reverse_bits().wrapping_sub(1)).reverse_bits() as u64;
         i += 1;
     }
     cur
