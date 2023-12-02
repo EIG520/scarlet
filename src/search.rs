@@ -1,6 +1,8 @@
 pub use crate::board::*;
 pub use crate::utils::*;
-pub use std::time::Instant;
+pub use crate::transposition_table::*;
+use std::time::Instant;
+use std::sync::RwLock;
 
 impl Board {
     pub fn perft(&mut self, depth: u64) -> u64 {
@@ -64,10 +66,11 @@ pub struct Searcher<'a> {
     search_best_eval: i32,
     search_ms: u128,
     nodes: u128,
+    transposition_table: &'a RwLock<TranspositionTable>,
 }
 
 impl<'a> Searcher<'a> {
-    pub fn new(board: &'a mut Board) -> Self {
+    pub fn new(board: &'a mut Board, transposition_table: &'a RwLock<TranspositionTable>) -> Self {
         Self {
             board,
             root_best: Move::null(),
@@ -76,15 +79,15 @@ impl<'a> Searcher<'a> {
             search_best_eval: -99999,
             search_ms: 0,
             nodes: 0,
+            transposition_table,
         }
     }
 
     pub fn search(&mut self, depth: i32, mut alpha: i32, beta: i32, ply: u32, timer:Instant) -> i32 {
         self.nodes += 1;
-        // Detect repetition
-        // Repetition goes by 2 in this instead of 3
-        // So don't do this in root
+
         let root: bool = ply == 0;
+        let _pv = alpha != beta - 1;
         let qsearch: bool = depth <= 0;
 
         if self.board.is_repetition() && !root {return 0;}
@@ -102,17 +105,43 @@ impl<'a> Searcher<'a> {
             if alpha < stand_pat {
                 alpha = stand_pat;
             }
+            // Only calc (and allocate space for) moves
+            // if we really know we need them
             mvs = MoveList::default();
             self.board.gen_legal_moves(&mut mvs, true);
         } else {
             mvs = MoveList::default();
             self.board.gen_legal_moves(&mut mvs, false);
         }
+        let mut tt_entry: Option<TranspositionInfo> = None;
 
-        self.board.sort(&mut mvs);
+        if !qsearch {
+            tt_entry = self.transposition_table
+                .read()
+                .expect("failed to read rwlock")
+                .probe(self.board);
+
+            if tt_entry.is_some() {
+                let entry = tt_entry.unwrap();
+
+                if entry.depth as i32 >= depth && (
+                    entry.fail == (false, false)
+                    || entry.fail == (true, false) && entry.score <= alpha
+                    || entry.fail == (false, true) && entry.score >= beta) 
+                {return entry.score}   
+            }
+        }
+        
+        if tt_entry.is_some() {
+            self.board.sort(&mut mvs, tt_entry.unwrap().best_move);
+        } else {
+            self.board.sort(&mut mvs, Move::null());
+        }
 
         // Main Search
         let mut best = -99999999;
+        let mut best_move = Move::null();
+        let mut mvtype = (true, false);
 
         for i in 0..mvs.pos {
 
@@ -124,12 +153,17 @@ impl<'a> Searcher<'a> {
 
             self.board.make_move(&mv);
 
-            let eval = -self.search(depth-1,  -beta, -alpha, ply + 1, timer);
+            let mut eval = -self.search(depth-1,  -alpha - 1, -alpha, ply + 1, timer);
+
+            if eval > alpha && eval < beta {
+                eval = -self.search(depth-1,  -beta, -alpha, ply + 1, timer);
+            }
             
             self.board.undo();
 
             if eval > best {
                 best = eval;
+                best_move = mv;
 
                 if root {
                     self.search_best = mv;
@@ -137,10 +171,14 @@ impl<'a> Searcher<'a> {
                 }
 
                 // Alpha beta pruning
-                if eval > alpha {alpha = eval;}
-                if alpha >= beta {break;}
+                if eval > alpha {alpha = eval;mvtype = (false, false)}
+                if alpha >= beta {mvtype = (false, true);break;}
             }
         }
+
+        self.transposition_table.write().expect("failed to lock transposition table").add(
+            self.board, depth as i16, best, best_move, mvtype
+        );
 
         if root && (timer.elapsed().as_millis() < self.search_ms || self.search_best_eval > self.root_best_eval) {
             self.root_best = self.search_best;

@@ -3,14 +3,17 @@ use std::error::Error;
 use std::str::SplitWhitespace;
 
 pub use crate::board::*;
+pub use crate::transposition_table::*;
 pub use crate::utils::*;
 pub use crate::search::*;
 
+use std::sync::RwLock;
 use std::fs::File;
 use std::io::{self, BufRead};
 
 pub struct UciHandler {
     board: Board,
+    transposition_table: RwLock<TranspositionTable>,
 }
 
 impl Default for UciHandler {
@@ -22,7 +25,8 @@ impl Default for UciHandler {
 impl UciHandler {
     pub fn new() -> Self {
         Self {
-            board: Board::new()
+            board: Board::new(),
+            transposition_table: RwLock::new(TranspositionTable::new(0xFFFFFFF))
         }
     }
 
@@ -77,7 +81,7 @@ impl UciHandler {
     pub fn handle_time(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
         match command.next() {
             Some(x) if x.parse::<u128>().is_ok() => {
-                let mut searcher: Searcher = Searcher::new(&mut self.board);
+                let mut searcher: Searcher = Searcher::new(&mut self.board, &self.transposition_table);
                 searcher.search_for_ms(x.parse::<u128>().unwrap() / 30);
                 Ok(())
             },
@@ -90,7 +94,7 @@ impl UciHandler {
         let next = command.next();
         match next {
             Some(a) if a.parse::<i32>().is_ok() => {
-                let mut searcher: Searcher = Searcher::new(&mut self.board);
+                let mut searcher: Searcher = Searcher::new(&mut self.board, &self.transposition_table);
                 println!("{}",move_to_chess(searcher.search_to_depth(a.parse::<i32>().unwrap())));
                 Ok(())
             }

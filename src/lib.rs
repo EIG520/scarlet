@@ -7,3 +7,4 @@ pub mod search;
 pub mod evaluate;
 pub mod sort;
 pub mod zobrist;
+pub mod transposition_table;
