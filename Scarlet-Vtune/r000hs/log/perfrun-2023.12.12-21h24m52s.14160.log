@@ -1,0 +1,109 @@
+81 [2028] INFO perfrun.launcher <> - Launcher main begin
+87 [2028] INFO perfrun.launcher <> - MessageCatalogInit finished
+87 [2028] INFO perfrun.launcher <> - Launcher instance created
+87 [2028] INFO perfrun.launcher <> - argc = 7; cmdline = C:\Program Files (x86)\Intel\oneAPI\vtune\2024.0\bin64\amplxe-runss.exe --ui-output-format xml --ui-output-fd 1088 --option-file C:\Users\eguer\OneDrive\Desktop\Chess\scarlet\Scarlet-Vtune\r000hs\config\runsa.options 
+104 [2028] INFO perfrun.launcher <> - New signal handler callback was added
+163 [2028] INFO perfrun.launcher <> - create msngr2::ICliToolContext
+163 [2028] INFO perfrun.launcher <> - create file finder object
+163 [2028] INFO perfrun.launcher <> - create a result directory: pattern = C:\Users\eguer\OneDrive\Desktop\Chess\scarlet\Scarlet-Vtune\r000hs pid = 4294967295
+169 [2028] INFO perfrun.launcher <> - create data directory = C:\Users\eguer\OneDrive\Desktop\Chess\scarlet\Scarlet-Vtune\r000hs\data.0
+169 [2028] INFO perfrun.launcher <> - Creating the master collection flag
+176 [2028] INFO perfrun.launcher <> - Done creating the master collection flag
+177 [21692] INFO perfrun.launcher <> - plugin [remoteplug] was disabled because it doesn't support the given collection type.
+177 [21692] INFO perfrun.sdk <> - Allocating TMU :C:\Users\eguer\OneDrive\Desktop\Chess\scarlet\Scarlet-Vtune\r000hs\data.0\systemcollector-14160-DESKTOP-I4HH9GR.sc
+177 [21692] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+179 [21692] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+179 [21692] INFO perfrun.launcher <> - plugin [gpu] was disabled because it doesn't support the given collection type.
+179 [21692] INFO perfrun.launcher <> - plugin [etw.kernel] was disabled because it doesn't support the given collection type.
+179 [21692] INFO perfrun.launcher <> - plugin [etw.dx] was disabled because it doesn't support the given collection type.
+179 [21692] INFO perfrun.launcher <> - plugin [etw.wsa] was disabled because it doesn't support the given collection type.
+179 [21692] INFO perfrun.mrte <> - system-wide mode is 0
+180 [21692] INFO perfrun.mrte <> - Getting  mrte profiling environment ...
+219 [21692] INFO perfrun.mrte <> - INTEL_MRTE_DATA_DIR=C:\Users\eguer\OneDrive\Desktop\Chess\scarlet\Scarlet-Vtune\r000hs\data.0
+219 [21692] INFO perfrun.mrte <> - INTEL_MRTE_HOST_NAME=DESKTOP-I4HH9GR
+219 [21692] INFO perfrun.mrte <> - JAVA_TOOL_OPTIONS=-agentlib:amplxe_samplingmrte_javaprof_1.0
+219 [21692] INFO perfrun.mrte <> - PATH=C:\Program Files (x86)\Intel\oneAPI\vtune\2024.0\bin32\runtime;C:\Program Files (x86)\Intel\oneAPI\vtune\2024.0\bin64\runtime;C:\Program Files\ImageMagick-7.1.1-Q16-HDRI;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\libnvvp;;;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.0\libnvvp;C:\Program Files\Oculus\Support\oculus-runtime;C:\Program Files (x86)\Common Files\Intel\Shared Libraries\redist\intel64\compiler;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.0\libnvvp;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\HaxeToolkit\haxe;C:\HaxeToolkit\neko;C:\Program Files\dotnet\;C:\Program Files\nodejs\;C:\ProgramData\chocolatey\bin;C:\Users\eguer\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\LocalCache\local-packages\Python310\Scripts;C:\Program Files\Git\cmd;C:\Users\eguer\Downloads\ffmpeg-master-latest-win64-gpl\ffmpeg-master-latest-win64-gpl\bin;C:\Program Files (x86)\spwn\;C:\Program Files\Go\bin;C:\Program Files\Airshipper\;C:\Program Files\NVIDIA Corporation\NVIDIA NvDLISR;C:\Program Files\NVIDIA Corporation\Nsight Compute 2023.1.1\;C:\Program Files (x86)\ZeroTier\One\;C:\Users\eguer\.cargo\bin;C:\Users\eguer\AppData\Local\Microsoft\WindowsApps;C:\Users\eguer\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\eguer\.dotnet\tools;C:\Users\eguer\AppData\Roaming\npm;C:\Users\eguer\AppData\Local\GitHubDesktop\bin;C:\MinGW\bin;C:\tools\dart-sdk\bin;C:\Users\eguer\AppData\Roaming\Pub\Cache\bin;C:\Users\eguer\go\bin;C:\Users\eguer\conda3\Library\bin\conda.bat;C:\Users\eguer\conda3\Scripts\conda.exe;C:\Users\eguer\conda3\condabin\conda.bat;C:\Program Files\Java\jdk-16.0.2
+220 [21692] INFO perfrun.mrte <> - COR_ENABLE_PROFILING=1
+220 [21692] INFO perfrun.mrte <> - COR_PROFILER={AA5E4821-E3B1-479c-B7FF-5AD047D22CED}
+220 [21692] INFO perfrun.mrte <> - COMPLUS_ProfAPI_ProfilerCompatibilitySetting=EnableV2Profiler
+220 [21692] INFO perfrun.mrte <> - CORECLR_ENABLE_PROFILING=1
+220 [21692] INFO perfrun.mrte <> - CORECLR_PROFILER={AA5E4821-E3B1-479c-B7FF-5AD047D22CED}
+220 [21692] INFO perfrun.mrte <> - CORECLR_PROFILER_PATH=C:\Program Files (x86)\Intel\oneAPI\vtune\2024.0\bin64/amplxe_samplingmrte_clrprof_1.0.dll
+220 [21692] INFO perfrun.mrte <> - INTEL_MRTE_PROFILER_MODE=mixed
+220 [21692] INFO perfrun.mrte <> - Data directory: C:\Users\eguer\OneDrive\Desktop\Chess\scarlet\Scarlet-Vtune\r000hs\data.0
+220 [21692] INFO perfrun.mrte <> - Mrte plugin is initialized
+220 [21692] INFO perfrun.launcher <> - plugin [emon] was disabled because it doesn't support the given collection type.
+220 [21692] INFO perfrun.launcher <> - plugin [cuscol] was disabled because it doesn't support the given collection type.
+220 [21692] INFO perfrun.launcher <> - plugin [stdsrc] was disabled because it doesn't support the given collection type.
+220 [21692] INFO perfrun.sdk <> - runCmd: "C:\Program Files (x86)\Intel\oneAPI\vtune\2024.0\bin64\sep.exe" -dry-run -ec CPU_CLK_UNHALTED.THREAD,CPU_CLK_UNHALTED.REF_TSC:sample:sa=3800000,INST_RETIRED.ANY:sample:sa=3800000,CPU_CLK_UNHALTED.REF_XCLK,CPU_CLK_UNHALTED.ONE_THREAD_ACTIVE,UOPS_RETIRED.RETIRE_SLOTS:sample:sa=2000003,FP_ARITH_INST_RETIRED.SCALAR_SINGLE,FP_ARITH_INST_RETIRED.128B_PACKED_SINGLE,FP_ARITH_INST_RETIRED.256B_PACKED_SINGLE,FP_ARITH_INST_RETIRED.SCALAR_DOUBLE,FP_ARITH_INST_RETIRED.128B_PACKED_DOUBLE,FP_ARITH_INST_RETIRED.256B_PACKED_DOUBLE,UOPS_EXECUTED.X87,UOPS_EXECUTED.THREAD -experimental
+223 [21692] INFO perfrun.sdk <> - runCmd started PID 19560
+331 [21692] INFO perfrun.launcher <> - plugin [vtsspp] was disabled because it doesn't support the given collection type.
+331 [21692] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+331 [21692] INFO perfrun.launcher <> - plugin [aoclprofile] was disabled because it doesn't support the given collection type.
+331 [21692] INFO perfrun.tpss <> - initialize tpss controller
+331 [21692] INFO perfrun.launcher <> - plugin [tpss] was disabled because it doesn't support the given collection type.
+331 [21692] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+331 [21692] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+331 [21692] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+331 [21692] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+331 [21692] INFO perfrun.launcher <> - plugin [power] was disabled because it doesn't support the given collection type.
+331 [21692] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+331 [21692] INFO perfrun.launcher <> - plugin [ipmwatch] was disabled because it doesn't support the given collection type.
+331 [21692] INFO perfrun.launcher <> - plugin [os_counters] was disabled because it doesn't support the given collection type.
+331 [21692] INFO perfrun.launcher <> - plugin [l0_metrics] was disabled because it doesn't support the given collection type.
+331 [2028] INFO perfrun.launcher <> - set environment variable: PATH = C:\Program Files (x86)\Intel\oneAPI\vtune\2024.0\bin32\runtime;C:\Program Files (x86)\Intel\oneAPI\vtune\2024.0\bin64\runtime;C:\Program Files\ImageMagick-7.1.1-Q16-HDRI;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\libnvvp;;;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.0\libnvvp;C:\Program Files\Oculus\Support\oculus-runtime;C:\Program Files (x86)\Common Files\Intel\Shared Libraries\redist\intel64\compiler;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.0\libnvvp;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\HaxeToolkit\haxe;C:\HaxeToolkit\neko;C:\Program Files\dotnet\;C:\Program Files\nodejs\;C:\ProgramData\chocolatey\bin;C:\Users\eguer\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\LocalCache\local-packages\Python310\Scripts;C:\Program Files\Git\cmd;C:\Users\eguer\Downloads\ffmpeg-master-latest-win64-gpl\ffmpeg-master-latest-win64-gpl\bin;C:\Program Files (x86)\spwn\;C:\Program Files\Go\bin;C:\Program Files\Airshipper\;C:\Program Files\NVIDIA Corporation\NVIDIA NvDLISR;C:\Program Files\NVIDIA Corporation\Nsight Compute 2023.1.1\;C:\Program Files (x86)\ZeroTier\One\;C:\Users\eguer\.cargo\bin;C:\Users\eguer\AppData\Local\Microsoft\WindowsApps;C:\Users\eguer\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\eguer\.dotnet\tools;C:\Users\eguer\AppData\Roaming\npm;C:\Users\eguer\AppData\Local\GitHubDesktop\bin;C:\MinGW\bin;C:\tools\dart-sdk\bin;C:\Users\eguer\AppData\Roaming\Pub\Cache\bin;C:\Users\eguer\go\bin;C:\Users\eguer\conda3\Library\bin\conda.bat;C:\Users\eguer\conda3\Scripts\conda.exe;C:\Users\eguer\conda3\condabin\conda.bat;C:\Program Files\Java\jdk-16.0.2
+331 [2028] INFO perfrun.launcher <> - set environment variable: INTEL_LIBITTNOTIFY32 = C:\Program Files (x86)\Intel\oneAPI\vtune\2024.0\bin32\runtime\ittnotify_collector.dll
+331 [2028] INFO perfrun.launcher <> - set environment variable: INTEL_LIBITTNOTIFY64 = C:\Program Files (x86)\Intel\oneAPI\vtune\2024.0\bin64\runtime\ittnotify_collector.dll
+331 [2028] INFO perfrun.launcher <> - set environment variable: INTEL_ITTNOTIFY_GROUPS = 
+331 [2028] INFO perfrun.launcher <> - set environment variable: INTEL_JIT_PROFILER32 = C:\Program Files (x86)\Intel\oneAPI\vtune\2024.0\bin32\runtime\ittnotify_collector.dll
+331 [2028] INFO perfrun.launcher <> - set environment variable: INTEL_JIT_PROFILER64 = C:\Program Files (x86)\Intel\oneAPI\vtune\2024.0\bin64\runtime\ittnotify_collector.dll
+331 [2028] INFO perfrun.launcher <> - set environment variable: ENABLE_JITPROFILING = 1
+331 [2028] INFO perfrun.launcher <> - set environment variable: CL_CONFIG_USE_VTUNE = True
+331 [2028] INFO perfrun.launcher <> - set environment variable: KMP_FORKJOIN_FRAMES = 0
+331 [2028] INFO perfrun.launcher <> - set environment variable: KMP_FORKJOIN_FRAMES_MODE = 0
+332 [2028] INFO perfrun.launcher <> - set environment variable: INTEL_MRTE_DATA_DIR = C:\Users\eguer\OneDrive\Desktop\Chess\scarlet\Scarlet-Vtune\r000hs\data.0
+332 [2028] INFO perfrun.launcher <> - set environment variable: INTEL_MRTE_HOST_NAME = DESKTOP-I4HH9GR
+332 [2028] INFO perfrun.launcher <> - set environment variable: JAVA_TOOL_OPTIONS = -agentlib:amplxe_samplingmrte_javaprof_1.0
+332 [2028] INFO perfrun.launcher <> - set environment variable: PATH = C:\Program Files (x86)\Intel\oneAPI\vtune\2024.0\bin32\runtime;C:\Program Files (x86)\Intel\oneAPI\vtune\2024.0\bin64\runtime;C:\Program Files\ImageMagick-7.1.1-Q16-HDRI;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.1\libnvvp;;;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.0\libnvvp;C:\Program Files\Oculus\Support\oculus-runtime;C:\Program Files (x86)\Common Files\Intel\Shared Libraries\redist\intel64\compiler;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.0\libnvvp;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\HaxeToolkit\haxe;C:\HaxeToolkit\neko;C:\Program Files\dotnet\;C:\Program Files\nodejs\;C:\ProgramData\chocolatey\bin;C:\Users\eguer\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.10_qbz5n2kfra8p0\LocalCache\local-packages\Python310\Scripts;C:\Program Files\Git\cmd;C:\Users\eguer\Downloads\ffmpeg-master-latest-win64-gpl\ffmpeg-master-latest-win64-gpl\bin;C:\Program Files (x86)\spwn\;C:\Program Files\Go\bin;C:\Program Files\Airshipper\;C:\Program Files\NVIDIA Corporation\NVIDIA NvDLISR;C:\Program Files\NVIDIA Corporation\Nsight Compute 2023.1.1\;C:\Program Files (x86)\ZeroTier\One\;C:\Users\eguer\.cargo\bin;C:\Users\eguer\AppData\Local\Microsoft\WindowsApps;C:\Users\eguer\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\eguer\.dotnet\tools;C:\Users\eguer\AppData\Roaming\npm;C:\Users\eguer\AppData\Local\GitHubDesktop\bin;C:\MinGW\bin;C:\tools\dart-sdk\bin;C:\Users\eguer\AppData\Roaming\Pub\Cache\bin;C:\Users\eguer\go\bin;C:\Users\eguer\conda3\Library\bin\conda.bat;C:\Users\eguer\conda3\Scripts\conda.exe;C:\Users\eguer\conda3\condabin\conda.bat;C:\Program Files\Java\jdk-16.0.2
+332 [2028] INFO perfrun.launcher <> - set environment variable: COR_ENABLE_PROFILING = 1
+332 [2028] INFO perfrun.launcher <> - set environment variable: COR_PROFILER = {AA5E4821-E3B1-479c-B7FF-5AD047D22CED}
+332 [2028] INFO perfrun.launcher <> - set environment variable: COMPLUS_ProfAPI_ProfilerCompatibilitySetting = EnableV2Profiler
+332 [2028] INFO perfrun.launcher <> - set environment variable: CORECLR_ENABLE_PROFILING = 1
+332 [2028] INFO perfrun.launcher <> - set environment variable: CORECLR_PROFILER = {AA5E4821-E3B1-479c-B7FF-5AD047D22CED}
+332 [2028] INFO perfrun.launcher <> - set environment variable: CORECLR_PROFILER_PATH = C:\Program Files (x86)\Intel\oneAPI\vtune\2024.0\bin64/amplxe_samplingmrte_clrprof_1.0.dll
+332 [2028] INFO perfrun.launcher <> - set environment variable: INTEL_MRTE_PROFILER_MODE = mixed
+332 [2028] INFO perfrun.launcher <> - RpcServer: run RPC server to handle requests
+336 [2028] INFO perfrun.sdk <> - IProcessUtil: the given executable 'C:\Users\eguer\OneDrive\Desktop\Chess\scarlet\target\release\scarlet.exe' is valid.
+336 [2028] INFO perfrun.launcher <> - Launcher: command line to start before modification = C:\Users\eguer\OneDrive\Desktop\Chess\scarlet\target\release\scarlet.exe
+336 [2028] INFO perfrun.launcher <> - Launcher: command line to start after modification = C:\Users\eguer\OneDrive\Desktop\Chess\scarlet\target\release\scarlet.exe
+336 [2028] INFO perfrun.launcher <> - ProcessCreator object was created
+337 [2028] INFO perfrun.launcher <> - Launcher: the process was started in suspend mode
+337 [21692] INFO perfrun.itt <> - start itt controller for pid #20596
+338 [21692] INFO perfrun.sdk <> - runCmd: "C:\Program Files (x86)\Intel\oneAPI\vtune\2024.0\bin64\sep.exe" -start -experimental -uem timer=10 -em trigger=CPU_CLK_UNHALTED.REF_TSC factor=5 -ebc -out C:\Users\eguer\OneDrive\Desktop\Chess\scarlet\Scarlet-Vtune\r000hs\data.0\sep54bc.20231212T212452.957851 -ec INST_RETIRED.ANY:sample:sa=3800000,CPU_CLK_UNHALTED.THREAD,CPU_CLK_UNHALTED.REF_TSC:sample:sa=3800000,CPU_CLK_UNHALTED.REF_XCLK,CPU_CLK_UNHALTED.ONE_THREAD_ACTIVE,UOPS_RETIRED.RETIRE_SLOTS:sample:sa=2000003,FP_ARITH_INST_RETIRED.SCALAR_SINGLE,FP_ARITH_INST_RETIRED.128B_PACKED_SINGLE,FP_ARITH_INST_RETIRED.256B_PACKED_SINGLE,FP_ARITH_INST_RETIRED.SCALAR_DOUBLE,FP_ARITH_INST_RETIRED.128B_PACKED_DOUBLE,FP_ARITH_INST_RETIRED.256B_PACKED_DOUBLE,UOPS_EXECUTED.X87,UOPS_EXECUTED.THREAD, -d 0 -uem factor=10
+340 [21692] INFO perfrun.sdk <> - runCmd started PID 5336
+1352 [2028] INFO perfrun.launcher <> - Launcher: all plugins were started
+1352 [2028] INFO perfrun.launcher <> - DirectoryMonitor object was created
+1353 [2028] INFO perfrun.launcher <> - DirectoryMonitor: a callback was added
+1353 [2028] INFO perfrun.launcher <> - DirectoryMonitor was started with pingTime = 1000
+1353 [2028] INFO perfrun.launcher <> - DeadlineTimer is going to be constructed
+1353 [2028] INFO perfrun.launcher <> - DeadlineTimer: a callback was added
+1360 [2028] INFO perfrun.launcher <> - Launcher: resume the profiled application and  wait its termination or stop command
+4757 [2028] INFO perfrun.launcher <> - Launcher: the profiled application was terminated  with exit code = 0
+4765 [21692] INFO perfrun.itt <> - detach itt controller
+4765 [21692] INFO perfrun.itt <> - detach itt controller done
+4766 [21692] INFO perfrun.sdk <> - runCmd: "C:\Program Files (x86)\Intel\oneAPI\vtune\2024.0\bin64\sep.exe" -stop
+4768 [21692] INFO perfrun.sdk <> - runCmd started PID 9912
+5507 [21692] INFO perfrun.sepdk <> - Sampling successfully stopped.
+WARNING: Windows Defender Antivirus may interfere PMU counter accesses which can fail to collect data in the collection. Please turn off Real Time Protection toggle switch and re-run the collection. Refer to SEP User Guide for more details.
+
+5507 [21692] INFO perfrun.sepdk <> - Waiting for main SEP process (5336) to finish...
+5507 [21692] INFO perfrun.sepdk <> - Main SEP process finished
+5507 [21692] INFO perfrun.sdk <> - De-allocating TMU: C:\Users\eguer\OneDrive\Desktop\Chess\scarlet\Scarlet-Vtune\r000hs\data.0\systemcollector-14160-DESKTOP-I4HH9GR.sc
+5529 [21692] INFO perfrun.system <> - closed the system trace file: C:\Users\eguer\OneDrive\Desktop\Chess\scarlet\Scarlet-Vtune\r000hs\data.0\systemcollector-14160-DESKTOP-I4HH9GR.sc
+5529 [2028] INFO perfrun.launcher <> - Launcher: all plugins were stopped.
+5529 [2028] INFO perfrun.launcher <> - DeadlineTimer is going to be destroyed
+5529 [2028] INFO perfrun.launcher <> - DeadlineTimer was destroyed
+5529 [2028] INFO perfrun.launcher <> - DirectoryMonitor object was destroyed
+5529 [2028] WARN perfrun.launcher <> - Stop command is ignored because it is received when collection is already stopped, at file: vcs\perfrun1\launcher\src\command_handler.cpp:226
+5530 [2028] INFO perfrun.launcher <> - Application exit code: 0
+5530 [2028] INFO perfrun.launcher <> - Exit code: 0

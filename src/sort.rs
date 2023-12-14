@@ -1,10 +1,11 @@
 pub use crate::board::*;
+pub use partial_sort;
 
 impl Board {
     pub fn sort(&mut self, mvs: &mut MoveList, best_move: Move) {
         mvs.moves.sort_unstable_by_key(|&a| 
             -self.value(a, best_move)
-    );
+        );
     }
     pub fn value(&self, mv: Move, bm: Move) -> i32 {    
         // mvv-lva

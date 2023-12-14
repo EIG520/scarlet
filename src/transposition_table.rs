@@ -3,10 +3,10 @@ pub use crate::board::*;
 #[derive(Clone, Copy, PartialEq)]
 pub struct Transposition {
     zobrist_leftbits: u32,
-    depth: i16,
     score: i32,
-    fail: (bool, bool),
     best_move: CompactMove,
+    depth: i16,
+    fail: (bool, bool),
 }
 impl Transposition {
     const fn empty() -> Self {
@@ -83,7 +83,8 @@ impl TranspositionTable {
         }
     }
     pub fn probe(&self, board: &Board) -> Option<TranspositionInfo> {
-        let entry = self.table[((board.zobrist_hash()) % self.table.len() as u64) as usize];
+        let idx = (board.zobrist_hash()) as usize;
+        let entry = self.table[idx % self.table.len()];
         if board.zobrist_hash() >> 32 == entry.zobrist_leftbits as u64 && entry != Transposition::empty() {
             return Some(TranspositionInfo::from(entry));
         }

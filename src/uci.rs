@@ -26,7 +26,7 @@ impl UciHandler {
     pub fn new() -> Self {
         Self {
             board: Board::new(),
-            transposition_table: RwLock::new(TranspositionTable::new(0xFFFFFFF))
+            transposition_table: RwLock::new(TranspositionTable::new(2000000))
         }
     }
 

@@ -400,3 +400,9 @@ impl Board {
         self.switch_color();
     }
 }
+
+// struct MoveGnerator {
+//     board: &'static Board,
+
+
+// }

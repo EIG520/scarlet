@@ -6,6 +6,7 @@ pub use fxhash::FxHashSet;
 pub use crate::board;
 pub use crate::moves;
 pub use crate::utils::*;
+pub use crate::turn::*;
 
 // Enums
 use PieceType::*;
@@ -67,19 +68,7 @@ pub enum Flag {
     BlackKingsideCastle,
     BlackQueensideCastle,
 }
-// Move
-#[derive(Default, Clone, Copy, PartialEq)]
-pub struct Move {
-    pub from: u64,
-    pub to: u64,
-    pub piece_type: PieceType,
-    pub flag: Flag,
-}
-impl Move {
-    pub const fn null() -> Self {
-        Self {from: 0, to: 0, piece_type: WhitePawn, flag:NoFlag}
-    }
-}
+
 pub struct MoveList {
     pub moves: Vec<Move>,
     pub pos: usize
@@ -100,6 +89,13 @@ impl MoveList {
 impl Default for MoveList {
     fn default() -> Self {
         Self {moves: Vec::with_capacity(100), pos: 0}
+    }
+}
+impl Iterator for MoveList {
+    type Item = Move;
+
+    fn next(&mut self) -> Option<<Self as Iterator>::Item> { 
+        todo!()
     }
 }
 
@@ -500,12 +496,6 @@ impl Board {
             self.state.bitboards[CastleRights as usize] &= 0b1100;
         }
         self.update_zobrist_hash_castle_rights();
-
-        // let eval = self.mg_eval();
-        // self.evaluate();
-        // if eval != self.mg_eval() {
-        //     println!("{} {}", eval, self.mg_eval());
-        // }
 
         self.repetition_tracker.add(self.zobrist_hash());
     }

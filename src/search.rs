@@ -92,6 +92,8 @@ impl<'a> Searcher<'a> {
 
         if self.board.is_repetition() && !root {return 0;}
 
+
+
         // bring legal moves list into scope
         let mut mvs: MoveList;
 
@@ -109,33 +111,31 @@ impl<'a> Searcher<'a> {
             // if we really know we need them
             mvs = MoveList::default();
             self.board.gen_legal_moves(&mut mvs, true);
+            self.board.sort(&mut mvs, Move::null());
         } else {
             mvs = MoveList::default();
             self.board.gen_legal_moves(&mut mvs, false);
-        }
-        let mut tt_entry: Option<TranspositionInfo> = None;
 
-        if !qsearch {
+            let tt_entry: Option<TranspositionInfo>;
+
             tt_entry = self.transposition_table
                 .read()
                 .expect("failed to read rwlock")
                 .probe(self.board);
-
+    
             if tt_entry.is_some() {
                 let entry = tt_entry.unwrap();
-
+    
                 if entry.depth as i32 >= depth && (
                     entry.fail == (false, false)
                     || entry.fail == (true, false) && entry.score <= alpha
                     || entry.fail == (false, true) && entry.score >= beta) 
-                {return entry.score}   
+                {return entry.score}
+
+                self.board.sort(&mut mvs, tt_entry.unwrap().best_move);
+            } else {
+                self.board.sort(&mut mvs, Move::null());
             }
-        }
-        
-        if tt_entry.is_some() {
-            self.board.sort(&mut mvs, tt_entry.unwrap().best_move);
-        } else {
-            self.board.sort(&mut mvs, Move::null());
         }
 
         // Main Search
@@ -145,7 +145,7 @@ impl<'a> Searcher<'a> {
 
         for i in 0..mvs.pos {
 
-            if timer.elapsed().as_millis() >= self.search_ms && depth > 2 && self.search_ms != 0 {
+            if self.nodes % 2048 == 0 && self.search_ms != 0 && timer.elapsed().as_millis() >= self.search_ms {
                 return 99999999;
             }
 
@@ -208,7 +208,11 @@ impl<'a> Searcher<'a> {
 
         self.search(depth, -999999, 999999, 0, timer);
 
-        println!("info depth {} nodes {} ", depth, self.nodes);
+        if timer.elapsed().as_millis() > 0 {
+            println!("info depth {} nodes {} nps {} score cp {} time {} pv {}", depth, self.nodes, 1000 * self.nodes / timer.elapsed().as_millis(), self.root_best_eval, timer.elapsed().as_millis(), move_to_chess(self.root_best));
+        } else {
+            println!("info depth {} nodes {} score cp {} time {} pv {}", depth, self.nodes, self.root_best_eval, timer.elapsed().as_millis(), move_to_chess(self.root_best));
+        }
         println!("bestmove {}", move_to_chess(self.root_best));
 
         self.root_best
