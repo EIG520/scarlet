@@ -42,7 +42,7 @@ const fn gen_rbbr() -> [u64; 256] {
     let mut i: u64 = 0;
     while i < 256 {
         cur[i as usize] = i.reverse_bits() & i.reverse_bits().wrapping_sub(1);
-        cur[i as usize] = cur[i as usize] ^ (cur[i as usize] - 1);
+        cur[i as usize] = cur[i as usize] ^ (cur[i as usize].wrapping_sub(1));
         cur[i as usize] = cur[i as usize].reverse_bits();
         i += 1;
     }
@@ -401,8 +401,3 @@ impl Board {
     }
 }
 
-// struct MoveGnerator {
-//     board: &'static Board,
-
-
-// }

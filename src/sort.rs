@@ -13,7 +13,7 @@ impl Board {
             return 9999999;
         }
         
-        let posq = self.piece_on_sq(mv.to.trailing_zeros() as usize) as i32;
+        let posq = self.piece_on_sq_maybe(mv.to.trailing_zeros() as usize) as i32;
 
         if posq != 0 {
             return posq * 100 - mv.piece_type as i32;

@@ -1,7 +1,6 @@
-// FINISHED rework of board to use objects instead of global variables
-// And also to be less bloated and generally better
 pub use bitintr::*;
 pub use fxhash::FxHashSet;
+use smallvec::{SmallVec, smallvec};
 
 pub use crate::board;
 pub use crate::moves;
@@ -13,7 +12,7 @@ use PieceType::*;
 use Color::*;
 use Flag::*;
 
-#[derive(Default, Clone, Copy, PartialEq)]
+#[derive(Default, Clone, Copy, PartialEq, Debug)]
 pub enum PieceType {
     #[default]
     WhitePawn=0,BlackPawn=1,
@@ -70,11 +69,11 @@ pub enum Flag {
 }
 
 pub struct MoveList {
-    pub moves: Vec<Move>,
+    pub moves: SmallVec<[Move; 32]>,
     pub pos: usize
 }
 impl MoveList {
-    pub fn new(moves: Vec<Move>, len: usize) -> Self {
+    pub fn new(moves: SmallVec<[Move; 32]>, len: usize) -> Self {
         Self {moves, pos: len}
     }
     pub fn push(&mut self, mv: Move) {
@@ -88,7 +87,7 @@ impl MoveList {
 }
 impl Default for MoveList {
     fn default() -> Self {
-        Self {moves: Vec::with_capacity(100), pos: 0}
+        Self {moves: smallvec![], pos: 0}
     }
 }
 impl Iterator for MoveList {
@@ -105,9 +104,12 @@ pub struct BoardState {
     // Bitboards
     bitboards: [u64; 16],
     zobrist_hash: u64,
-    mg_eval: i32,
-    eg_eval: i32,
-    phase: i32,
+    repetition_bloom: u64,
+    repetition_stage: u16,
+    mg_eval: i16,
+    eg_eval: i16,
+    phase: i16,
+
     // 50 Move Rule Counter (unused)
     move_counter: u64,
 }
@@ -118,6 +120,8 @@ impl BoardState {
             bitboards:[65280, 71776119061217280, 66, 4755801206503243776, 36, 2594073385365405696, 129, 9295429630892703744, 16, 1152921504606846976, 8, 576460752303423488,65535, 18446462598732840960,0b1111,0,],
             zobrist_hash:0,
             mg_eval: 0,
+            repetition_stage: 0,
+            repetition_bloom: 0,
             eg_eval: 0,
             phase: 0,
             move_counter:0,
@@ -127,6 +131,8 @@ impl BoardState {
         BoardState {
             bitboards: self.bitboards,
             zobrist_hash: self.zobrist_hash,
+            repetition_bloom: self.repetition_bloom,
+            repetition_stage: self.repetition_stage,
             mg_eval: self.mg_eval,
             eg_eval: self.eg_eval,
             phase: self.phase,
@@ -138,41 +144,6 @@ impl BoardState {
     }
 }
 
-// Keeps track of repetitions
-pub struct RepetitionTracker {
-    hashset1: FxHashSet<u64>,
-    hashset2: FxHashSet<u64>,
-    is_draw: bool,
-}
-impl RepetitionTracker {
-    pub fn add(&mut self, key: u64) {
-        match (self.hashset1.contains(&key), self.hashset2.contains(&key)) {
-            (true, true) => {self.is_draw = true;},
-            (true, false) => {self.hashset2.insert(key);},
-            (false, true) => {},
-            (false, false) => {self.hashset1.insert(key);},
-        }
-    }
-    pub fn remove(&mut self, key: u64) {
-        match (self.hashset1.contains(&key), self.hashset2.contains(&key)) {
-            (true, true) => {self.is_draw = false;self.hashset2.remove(&key);},
-            (true, false) => {self.hashset1.remove(&key);},
-            (false, true) => {},
-            (false, false) => {},
-        }  
-    }
-    pub fn reset(&mut self) {
-        self.hashset1.clear();
-        self.hashset2.clear();
-        self.is_draw = false;
-    }
-    pub fn new() -> Self {
-        RepetitionTracker { hashset1: FxHashSet::default(), hashset2: FxHashSet::default(), is_draw: false }
-    }
-    pub fn is_repetition(&self) -> bool {
-        self.is_draw
-    }
-}
 
 // Board Keeps track of history
 pub struct Board {
@@ -180,7 +151,6 @@ pub struct Board {
     state: BoardState,
     // All past states of the board
     history: Vec<BoardState>,
-    repetition_tracker: RepetitionTracker,
     // For movegen
     checkmask: u64,
     attacked: u64,
@@ -193,8 +163,7 @@ impl Board {
         let mut cur = Board {
             side_to_move: Color::White,
             state: BoardState::new(),
-            history: vec![],
-            repetition_tracker: RepetitionTracker::new(),
+            history: Vec::with_capacity(16),
             checkmask: u64::MAX,
             attacked: 0,
         };
@@ -219,26 +188,32 @@ impl Board {
     pub fn set_zobrist_hash(&mut self, new_hash: u64) {
         self.state.zobrist_hash = new_hash;
     }
-    pub fn set_mg_eval(&mut self, new_eval: i32) {
+    pub fn set_mg_eval(&mut self, new_eval: i16) {
         self.state.mg_eval = new_eval;
     }
-    pub fn set_eg_eval(&mut self, new_eval: i32) {
+    pub fn set_eg_eval(&mut self, new_eval: i16) {
         self.state.eg_eval = new_eval;
     }
-    pub fn set_phase(&mut self, new_phase: i32) {
+    pub fn set_phase(&mut self, new_phase: i16) {
         self.state.phase = new_phase;
     }
-    pub fn mg_eval(&self) -> i32 {
+    pub fn mg_eval(&self) -> i16 {
         self.state.mg_eval
     }
-    pub fn eg_eval(&self) -> i32 {
+    pub fn eg_eval(&self) -> i16 {
         self.state.eg_eval
     }
-    pub fn phase(&self) -> i32 {
+    pub fn phase(&self) -> i16 {
         self.state.phase
     }
-    pub fn eval(&mut self) -> i32 {
-        -1 * (self.state.mg_eval * self.state.phase + self.state.eg_eval * (30 - self.state.phase)) / 30 * (self.color() as i32 * -2 + 1)
+    pub fn eval(&self) -> i16 {
+        (self.state.phase * self.state.mg_eval / 30 + (30 - self.state.phase) * self.state.eg_eval / 30) * (self.color() as i16 * 2 - 1)
+    }
+    pub fn print_eval_info(&self) {
+        println!("eval: {}", self.eval());
+        println!("  phase: {}", self.state.phase);
+        println!("  mg eval: {}", self.mg_eval());
+        println!("  eg eval: {}", self.eg_eval());
     }
 
     pub fn set_bitboard(&mut self, piece_type: PieceType, new_bitboard: u64) {
@@ -257,9 +232,7 @@ impl Board {
     pub fn checkmask(&mut self) -> u64 {
         self.checkmask
     }
-    pub fn repinfo(&self) {
-        println!("{:?}", self.repetition_tracker.hashset1);
-    }
+
     // Remove from an entire square
     // Return true if any changes were made
     pub fn clear_square(&mut self, square: u64) -> bool {
@@ -291,11 +264,30 @@ impl Board {
     }
 
     pub fn is_repetition(&self) -> bool {
-        self.repetition_tracker.is_repetition()
+        if self.history.len() == 0 { return false; }
+
+        let mut i = self.history.len() - 1;
+
+    
+        if self.history[i].repetition_bloom & self.zobrist_hash() != self.zobrist_hash() {
+            return false;
+        }
+
+        let mut cnt = 0;
+
+        while i > 0 && self.history[i].repetition_stage == self.state.repetition_stage {
+            if self.history[i].zobrist_hash == self.zobrist_hash() {
+                cnt += 1;
+            }
+            i -= 1;
+        }
+
+        return cnt >= 2;
     }
 
     // Make a move
     pub fn make_move(&mut self, mv: &Move) {
+
         self.history.push(self.state);
 
         self.state.move_counter += 1;
@@ -313,8 +305,10 @@ impl Board {
         }
         self.update_zobrist_hash_en_passant();
 
-        // self.evaluate();
-        // println!("{}", self.mg_eval());
+        if (mv.piece_type as usize) < 2 {
+            self.state.repetition_stage += 1;
+            self.state.repetition_bloom = 0;
+        }
 
         match mv.flag {
             NoFlag => {
@@ -322,6 +316,10 @@ impl Board {
                 if mv.to & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped())) > 0{
                     self.update_eval_capture(num_to_piece(self.piece_on_sq(mv.to.trailing_zeros() as usize)), mv.to);
                     self.state.move_counter = 0;
+
+                    self.state.repetition_stage += 1;
+                    self.state.repetition_bloom = 0;
+
                     self.clear_square(mv.to);
                 }
 
@@ -372,6 +370,9 @@ impl Board {
                 self.update_zobrist_hash(mv.from, mv.piece_type);
                 self.update_zobrist_hash(mv.to, WhiteKnight.shiftedby(self.color()));
                 self.update_eval_promotion(WhiteKnight.shiftedby(self.color()), mv.from, mv.to);
+
+                self.state.repetition_stage += 1;
+                self.state.repetition_bloom = 0;
             }
             BishopPromotion => {
                 // For capture + promote
@@ -387,6 +388,9 @@ impl Board {
                 self.update_zobrist_hash(mv.from, mv.piece_type);
                 self.update_zobrist_hash(mv.to, WhiteBishop.shiftedby(self.color()));
                 self.update_eval_promotion(WhiteBishop.shiftedby(self.color()), mv.from, mv.to);
+
+                self.state.repetition_stage += 1;
+                self.state.repetition_bloom = 0;
             }
             RookPromotion => {
                 // For capture + promote
@@ -402,6 +406,9 @@ impl Board {
                 self.update_zobrist_hash(mv.from, mv.piece_type);
                 self.update_zobrist_hash(mv.to, WhiteRook.shiftedby(self.color()));
                 self.update_eval_promotion(WhiteRook.shiftedby(self.color()), mv.from, mv.to);
+
+                self.state.repetition_stage += 1;
+                self.state.repetition_bloom = 0;
             }
             QueenPromotion => {
                 // For capture + promote
@@ -417,6 +424,9 @@ impl Board {
                 self.update_zobrist_hash(mv.from, mv.piece_type);
                 self.update_zobrist_hash(mv.to, WhiteQueen.shiftedby(self.color()));
                 self.update_eval_promotion(WhiteQueen.shiftedby(self.color()), mv.from, mv.to);
+
+                self.state.repetition_stage += 1;
+                self.state.repetition_bloom = 0;
             }
             WhiteKingsideCastle => {
                 // Move King
@@ -497,7 +507,7 @@ impl Board {
         }
         self.update_zobrist_hash_castle_rights();
 
-        self.repetition_tracker.add(self.zobrist_hash());
+        self.state.repetition_bloom |= self.zobrist_hash();
     }
 
     pub fn switch_color(&mut self) {
@@ -517,17 +527,14 @@ impl Board {
     pub fn init(&mut self) {
         self.gen_zobrist_hash();
         self.evaluate();
-        self.repetition_tracker.add(self.zobrist_hash());
     }
 
     pub fn undo(&mut self) {
-        self.repetition_tracker.remove(self.zobrist_hash());
         self.state = self.history.pop().unwrap();
         self.switch_color_no_zobrist_change();
     }
 
     pub fn reset_hist(&mut self) {
-        self.repetition_tracker.reset();
         self.history.clear();
     }
 
@@ -555,13 +562,23 @@ impl Board {
         format!("{}{}{}", bbsquare_to_chess(mv.from), bbsquare_to_chess(mv.to), flag_to_piece(mv.flag))
     }
 
-    pub fn piece_on_sq(&self, square: usize) -> usize{
+    pub fn piece_on_sq_maybe(&self, square: usize) -> usize{
+        for i in 1..13 {
+            if 1_u64.wrapping_shl(square as u32) & self.get_bitboard(num_to_piece(i-1)) > 0 {
+                return i;
+            }
+        }
+        0
+    }
+
+    pub fn piece_on_sq(&self, square: usize) -> usize {
         for i in 0..12 {
             if 1_u64.wrapping_shl(square as u32) & self.get_bitboard(num_to_piece(i)) > 0 {
                 return i;
             }
         }
-        0
+
+        12
     }
 
     pub fn move_flag(&self, mv: &str) -> usize {

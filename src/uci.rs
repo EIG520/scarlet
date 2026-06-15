@@ -7,6 +7,9 @@ pub use crate::transposition_table::*;
 pub use crate::utils::*;
 pub use crate::search::*;
 
+use strum_macros::*;
+use strum::*;
+
 use std::sync::RwLock;
 use std::fs::File;
 use std::io::{self, BufRead};
@@ -14,6 +17,7 @@ use std::io::{self, BufRead};
 pub struct UciHandler {
     board: Board,
     transposition_table: RwLock<TranspositionTable>,
+    options: StoredOptions,
 }
 
 impl Default for UciHandler {
@@ -24,13 +28,19 @@ impl Default for UciHandler {
 
 impl UciHandler {
     pub fn new() -> Self {
-        Self {
+        let se = Self {
             board: Board::new(),
-            transposition_table: RwLock::new(TranspositionTable::new(2000000))
-        }
+            transposition_table: RwLock::new(TranspositionTable::new(0)),
+            options: StoredOptions { use_tt: true },
+        };
+        se.transposition_table.write().expect("dern").resize(16000000 / std::mem::size_of::<Transposition>());
+        se
     }
 
     pub fn uci(&mut self) {
+
+
+
         let mut line: String;
 
         loop {
@@ -45,20 +55,88 @@ impl UciHandler {
     }
 
     pub fn handle_once(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
+
         match command.next() {
             Some("ucinewgame") => Ok(()),
             Some("isready") => {println!("readyok"); Ok(())},
-            Some("uci") => {println!("uciok"); Ok(())},
+            Some("uci") => {self.handle_uci(); Ok(())},
 
-            Some("exit") => Err(()),
             Some("quit") => Err(()),
 
             Some("go") => self.handle_go(command),
             Some("position") => self.handle_position(command),
+            Some("setoption") => self.handle_option(command),
 
-            Some("d") => {print_bb(self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces));println!("{}", self.board.zobrist_hash());println!("{}", self.board.eval());Ok(())}
+            Some("d") => {print_bb(self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces));println!("{}", self.board.zobrist_hash());self.board.print_eval_info();self.board.evaluate();self.board.print_eval_info();println!("isrep: {}", self.board.is_repetition());Ok(())}
+            Some("shorttest") => {self.handle_test_shortform(command)}
             _ => Ok(())
         }
+    }
+
+    pub fn handle_option(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
+        command.next();
+
+        match command.next() {
+            // Set tt size in bytes
+            Some(x) if x.to_lowercase() == "hash" => {
+                command.next();
+                
+                match command.next() {
+                    Some(x) if x.parse::<i32>().is_ok() => {
+                        self.transposition_table.write().expect("dern").resize(x.parse::<usize>().unwrap() / std::mem::size_of::<Transposition>());
+                        println!("info string Elements in new TT: {}", x.parse::<usize>().unwrap() / std::mem::size_of::<Transposition>());
+                        Ok(())
+                    }
+                    _ => {Ok(())}
+                }
+            }
+            Some(x) if x.to_lowercase() == "usett" => {
+                command.next();
+
+                match command.next() {
+                    Some("true") => {
+                        self.options.use_tt = true;
+                        Ok(())
+                    }
+                    Some("false") => {
+                        self.options.use_tt = false;
+                        Ok(())
+                    }
+                    _ => {Ok(())}
+                }
+            }
+            _ => {Ok(())}
+        }
+    }
+
+    pub fn handle_uci(&mut self) {
+        println!("id name ScarletU");
+        println!("id author ZTS439");
+
+        println!();
+
+        for option in EngineOption::iter() {
+            print!("option name {} type {} default {}", option.get_str("Name").unwrap(), option.get_str("Type").unwrap(), option.get_str("Default").unwrap());
+
+            if option.get_str("Type").unwrap() == "spin" {
+                print!(" min {} max {}", option.get_str("Min").unwrap(), option.get_str("Max").unwrap());
+            }
+            println!();
+        }
+
+        println!("uciok");
+    }
+
+    pub fn handle_test_shortform(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
+        println!("{}", self.board.move_to_chess(
+                CompactMove::from(
+                    self.board.chess_to_move(
+                        command.next().ok_or(())?.to_owned()
+                    )
+                ).long_form()
+            )
+        );
+        Ok(())
     }
 
     pub fn handle_go(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
@@ -81,7 +159,7 @@ impl UciHandler {
     pub fn handle_time(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
         match command.next() {
             Some(x) if x.parse::<u128>().is_ok() => {
-                let mut searcher: Searcher = Searcher::new(&mut self.board, &self.transposition_table);
+                let mut searcher: Searcher = Searcher::new(&mut self.board, &self.transposition_table, self.options);
                 searcher.search_for_ms(x.parse::<u128>().unwrap() / 30);
                 Ok(())
             },
@@ -94,7 +172,7 @@ impl UciHandler {
         let next = command.next();
         match next {
             Some(a) if a.parse::<i32>().is_ok() => {
-                let mut searcher: Searcher = Searcher::new(&mut self.board, &self.transposition_table);
+                let mut searcher: Searcher = Searcher::new(&mut self.board, &self.transposition_table, self.options);
                 println!("{}",move_to_chess(searcher.search_to_depth(a.parse::<i32>().unwrap())));
                 Ok(())
             }
@@ -314,7 +392,7 @@ pub fn test_movegen(fen: String, node_counts: Vec<i64>) -> Result<i32, ()>{
     if let Err(()) = uci.handle_once(&mut format!("position fen {}", fen).split_whitespace()) {return Err(())}
 
     for i in 0..node_counts.len() as u64 {
-        if node_counts[i as usize] == -1 {continue;}
+        if node_counts[i as u64 as usize] == -1 {continue;}
 
         let ncs = uci.board.sub_perft(i + 1);
         if ncs != node_counts[i as usize] as u64{
@@ -363,4 +441,17 @@ pub fn test_movegen_on_suite(suite_filename: &str) -> Result<(), Box::<dyn Error
         }
     }
     Ok(())
+}
+
+#[derive(Clone, Copy, Debug, strum_macros::EnumProperty, EnumIter)]
+enum EngineOption {
+    #[strum(props(Name = "Hash", Type = "spin", Default="16", Min="0", Max="999999999"))]
+    Hash,
+    #[strum(props(Name = "UseTT", Type = "check", Default="true"))]
+    UseTT,
+}
+
+#[derive(Clone, Copy)]
+pub struct StoredOptions {
+    pub use_tt: bool,
 }

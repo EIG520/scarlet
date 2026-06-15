@@ -5,7 +5,7 @@ edition = "2021"
 
 [profile.release]
 opt-level = 3
-debug = true
+debug = false
 split-debuginfo = '...'  # Platform-specific.
 debug-assertions = false
 overflow-checks = false
@@ -16,17 +16,7 @@ codegen-units = 1
 rpath = false
 
 [profile.dev]
-opt-level = 0
-debug = true
-split-debuginfo = '...'  # Platform-specific.
-debug-assertions = true
-overflow-checks = false
-lto = false
-panic = 'unwind'
-incremental = true
-codegen-units = 256
-rpath = false
-
+opt-level = 3
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -35,3 +25,6 @@ bitintr = "0.3.0"
 fxhash = "0.2.1"
 lazy_static = "1.4.0"
 partial_sort = "0.2.0"
+smallvec = "1.11.2"
+strum = "0.25.0"
+strum_macros = "0.25.3"

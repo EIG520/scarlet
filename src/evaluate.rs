@@ -1,9 +1,9 @@
 pub use crate::board::*;
 
-const MG_PV: [i32; 6] = [82, 337, 365, 477, 1025, 0];
-const EG_PV: [i32; 6] = [94, 281, 297, 512,  936, 0];
+const MG_PV: [i16; 6] = [82, 337, 365, 477, 1025, 0];
+const EG_PV: [i16; 6] = [94, 281, 297, 512,  936, 0];
 
-const EVAL_TABLES: [[i32; 64]; 12] = [[0,   0,   0,   0,   0,   0,  0,   0,
+const EVAL_TABLES: [[i16; 64]; 12] = [[0,   0,   0,   0,   0,   0,  0,   0,
 98, 134,  61,  95,  68, 126, 34, -11,
 -6,   7,  26,  31,  65,  56, 25, -20,
 -14,  13,   6,  21,  23,  12, 17, -23,
@@ -112,7 +112,7 @@ impl Board {
 
         // Account for kings
         // I could just have a phase table but shut up
-        let mut phase: i32 = -12;
+        let mut phase: i16 = -12;
 
         for i in 0..6 {
             let mut bb = self.get_bitboard(num_to_piece(2*i));
@@ -123,7 +123,7 @@ impl Board {
 
                 eg_eval += EVAL_TABLES[2*i+1][(pos ^ 56) as usize] + EG_PV[i];
 
-                phase += i as i32;
+                phase += i as i16;
 
 
                 bb = bb & bb-1;
@@ -136,7 +136,7 @@ impl Board {
                 eg_eval -= EVAL_TABLES[2*i+1][pos as usize] + EG_PV[i];
 
 
-                phase += i as i32;
+                phase += i as i16;
 
 
                 bb = bb & (bb-1);
@@ -165,7 +165,7 @@ impl Board {
         }
     }
     pub fn update_eval_capture(&mut self, piece_type: PieceType, square: u64) {
-        self.set_phase(self.phase() - piece_type as i32 / 2);
+        self.set_phase(self.phase() - piece_type as i16 / 2);
 
         match self.color() {
             Color::White => {
@@ -179,7 +179,7 @@ impl Board {
         }
     }
     pub fn update_eval_promotion(&mut self, promotion_type: PieceType, from: u64, to: u64) {
-        self.set_phase(self.phase() + promotion_type as i32 / 2);
+        self.set_phase(self.phase() + promotion_type as i16 / 2);
         match self.color() {
             Color::White => {
                 self.set_mg_eval(self.mg_eval() - EVAL_TABLES[PieceType::WhitePawn as usize][from.trailing_zeros() as usize ^ 63] - MG_PV[PieceType::WhitePawn as usize / 2]);
