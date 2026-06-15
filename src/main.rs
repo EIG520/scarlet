@@ -7,15 +7,5 @@ pub fn main() {
 
     let mut uci: UciHandler = UciHandler::new();
 
-    // let _ = uci.handle_once(&mut "go wtime 100000".split_whitespace());
-
-    let mut board = Board::new();
-    let mut mvs = MoveList::default();
-    board.gen_legal_moves(&mut mvs, true);
-
-    for m in mvs.moves {
-        println!("{}", move_to_chess(m));
-    }
-
     uci.uci();
 }
