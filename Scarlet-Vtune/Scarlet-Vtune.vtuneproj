@@ -200,7 +200,7 @@
        </contextValue>
        <contextValue>
         <id>enableStackCollect</id>
-        <value type="bool">false</value>
+        <value type="bool">true</value>
        </contextValue>
        <contextValue>
         <id>goodFastFrameThreshold</id>
