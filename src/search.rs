@@ -129,6 +129,17 @@ impl<'a> Searcher<'a> {
             if alpha < stand_pat {
                 alpha = stand_pat;
             }
+        } else if !root && reduce {
+            // null move pruning
+            if donull && depth > 2 {
+                self.board.make_null_move();
+
+                let eval = -self.search(depth - 3, -beta, 1-beta, ply + 1, false, timer);
+            
+                self.board.unmake_null_move();
+
+                if eval >= beta { return eval; }
+            }
         }
 
         let mut mvs = MoveList::default();
