@@ -130,6 +130,9 @@ impl<'a> Searcher<'a> {
                 alpha = stand_pat;
             }
         } else if !root && reduce {
+            // rfp
+            if stat - 85 * depth >= beta { return stat; }
+
             // null move pruning
             if donull && depth > 2 {
                 self.board.make_null_move();
