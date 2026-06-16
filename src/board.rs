@@ -106,9 +106,9 @@ pub struct BoardState {
     zobrist_hash: u64,
     repetition_bloom: u64,
     repetition_stage: u16,
-    mg_eval: i16,
-    eg_eval: i16,
-    phase: i16,
+    mg_eval: i32,
+    eg_eval: i32,
+    phase: i32,
 
     // 50 Move Rule Counter (unused)
     move_counter: u64,
@@ -188,26 +188,26 @@ impl Board {
     pub fn set_zobrist_hash(&mut self, new_hash: u64) {
         self.state.zobrist_hash = new_hash;
     }
-    pub fn set_mg_eval(&mut self, new_eval: i16) {
+    pub fn set_mg_eval(&mut self, new_eval: i32) {
         self.state.mg_eval = new_eval;
     }
-    pub fn set_eg_eval(&mut self, new_eval: i16) {
+    pub fn set_eg_eval(&mut self, new_eval: i32) {
         self.state.eg_eval = new_eval;
     }
-    pub fn set_phase(&mut self, new_phase: i16) {
+    pub fn set_phase(&mut self, new_phase: i32) {
         self.state.phase = new_phase;
     }
-    pub fn mg_eval(&self) -> i16 {
+    pub fn mg_eval(&self) -> i32 {
         self.state.mg_eval
     }
-    pub fn eg_eval(&self) -> i16 {
+    pub fn eg_eval(&self) -> i32 {
         self.state.eg_eval
     }
-    pub fn phase(&self) -> i16 {
+    pub fn phase(&self) -> i32 {
         self.state.phase
     }
-    pub fn eval(&self) -> i16 {
-        (self.state.phase * self.state.mg_eval / 30 + (30 - self.state.phase) * self.state.eg_eval / 30) * (self.color() as i16 * 2 - 1)
+    pub fn eval(&self) -> i32 {
+        (self.state.phase * self.state.mg_eval / 30 + (30 - self.state.phase) * self.state.eg_eval / 30) * (self.color() as i32 * 2 - 1)
     }
     pub fn print_eval_info(&self) {
         println!("eval: {}", self.eval());
@@ -508,6 +508,24 @@ impl Board {
         self.update_zobrist_hash_castle_rights();
 
         self.state.repetition_bloom |= self.zobrist_hash();
+    }
+
+    pub fn make_null_move(&mut self) {
+        self.history.push(self.state);
+
+        self.state.move_counter += 1;
+
+        self.update_zobrist_hash_en_passant();
+        self.state.bitboards[EnPassant as usize] = 0;
+        self.update_zobrist_hash_en_passant();
+
+        self.switch_color();
+        self.state.repetition_bloom |= self.zobrist_hash();
+    }
+
+    pub fn unmake_null_move(&mut self) {
+        self.state = self.history.pop().unwrap();
+        self.switch_color_no_zobrist_change();
     }
 
     pub fn switch_color(&mut self) {

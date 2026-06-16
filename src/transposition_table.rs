@@ -10,7 +10,7 @@ pub enum Fail {
 #[derive(Clone, Copy, PartialEq)]
 pub struct Transposition {
     zobrist_leftbits: u32,
-    score: i16,
+    score: i32,
     best_move: CompactMove,
     depth: i8,
     fail: Fail,
@@ -33,7 +33,7 @@ impl Transposition {
 #[derive(Clone, Copy)]
 pub struct TranspositionInfo {
     pub depth: i8,
-    pub score: i16,
+    pub score: i32,
     pub best_move: Move,
     pub fail: Fail,
 }
@@ -79,7 +79,7 @@ impl TranspositionTable {
             table: vec![Transposition::empty(); size]
         }
     }
-    pub fn add(&mut self, board: &Board, depth: i8, score: i16, best_move: Move, fail: Fail) {
+    pub fn add(&mut self, board: &Board, depth: i8, score: i32, best_move: Move, fail: Fail) {
         let len = self.table.len() as u64;
         if len > 0 {
             self.table[(board.zobrist_hash() % len) as usize] = Transposition {

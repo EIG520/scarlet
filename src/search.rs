@@ -1,6 +1,7 @@
 pub use crate::board::*;
 pub use crate::transposition_table::*;
 pub use crate::uci::*;
+use std::cmp::min;
 use std::time::Instant;
 use std::sync::RwLock;
 
@@ -62,8 +63,8 @@ pub struct Searcher<'a> {
     board: &'a mut Board,
     root_best: Move,
     search_best: Move,
-    root_best_eval: i16,
-    search_best_eval: i16,
+    root_best_eval: i32,
+    search_best_eval: i32,
     search_ms: u128,
     nodes: u128,
     transposition_table: &'a RwLock<TranspositionTable>,
@@ -85,14 +86,15 @@ impl<'a> Searcher<'a> {
         }
     }
 
-    pub fn search(&mut self, depth: i16, mut alpha: i16, beta: i16, ply: u32, timer:Instant) -> i16 {
+    pub fn search(&mut self, depth: i32, mut alpha: i32, beta: i32, ply: u32, donull: bool, timer:Instant) -> i32 {
         self.nodes += 1;
 
         let root: bool = ply == 0;
-        let _pv = alpha != beta - 1;
+        self.board.gen_hit_squares(); // maybe remove this line later
+        let incheck = self.board.attacked() & self.board.get_bitboard(PieceType::WhiteKing.shiftedby(self.board.color())) > 0;
+        let pv = alpha != beta - 1;
         let qsearch: bool = depth <= 0;
-        // self.board.gen_hit_squares();
-        // let incheck = self.board.attacked() & self.board.get_bitboard(PieceType::WhiteKing.shiftedby(self.board.color())) > 0;
+        let reduce = !pv && !incheck;
 
         if self.board.is_repetition() && !root {return 0;}
 
@@ -108,12 +110,14 @@ impl<'a> Searcher<'a> {
         if tt_entry.is_some() && !root {
             let entry = tt_entry.unwrap();
 
-            if entry.depth as i16 >= depth && (
+            if entry.depth as i32 >= depth && (
                 entry.fail == Fail::NoFail
                 || entry.fail == Fail::FailHigh && entry.score >= beta
                 || entry.fail == Fail::FailLow && entry.score <= alpha) 
             {return entry.score}
         }
+
+        let stat = self.board.eval();
 
         // Qsearch
         if qsearch {
@@ -154,13 +158,13 @@ impl<'a> Searcher<'a> {
 
             let mut eval;
             if i > 0 {
-                eval = -self.search(depth-1,  -alpha - 1, -alpha, ply + 1, timer);
+                eval = -self.search(depth-1,  -alpha - 1, -alpha, ply + 1, donull, timer);
 
                 if eval > alpha && eval < beta {
-                    eval = -self.search(depth-1,  -beta, -alpha, ply + 1, timer);
+                    eval = -self.search(depth-1,  -beta, -alpha, ply + 1, donull, timer);
                 }
             } else {
-                eval = -self.search(depth-1,  -beta, -alpha, ply + 1, timer);
+                eval = -self.search(depth-1,  -beta, -alpha, ply + 1, donull, timer);
             }
 
 
@@ -192,7 +196,7 @@ impl<'a> Searcher<'a> {
             }
             // in check & no moves = mate
             if self.board.checkmask() != u64::MAX {
-                return ply as i16 - 30000;
+                return ply as i32 - 30000;
             }
             return 0;
         }
@@ -220,7 +224,7 @@ impl<'a> Searcher<'a> {
 
         let timer = Instant::now();
 
-        self.search(depth as i16, -30000, 30000, 0, timer);
+        self.search(depth as i32, -30000, 30000, 0, true, timer);
 
         if timer.elapsed().as_millis() > 0 {
             print!("info depth {} nodes {} nps {} score cp {} time {}", depth, self.nodes, 1000 * self.nodes / timer.elapsed().as_millis(), self.root_best_eval, timer.elapsed().as_millis());
@@ -282,7 +286,7 @@ impl<'a> Searcher<'a> {
             if depth == 100 {break}
 
             depth += 1;
-            self.search(depth, -30000, 30000, 0, timer);
+            self.search(depth, -30000, 30000, 0, true, timer);
 
             if timer.elapsed().as_millis() > 0 {
                 print!("info depth {} nodes {} nps {} score cp {} time {}", depth, self.nodes, 1000 * self.nodes / timer.elapsed().as_millis(), self.root_best_eval, timer.elapsed().as_millis());
