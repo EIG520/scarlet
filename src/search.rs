@@ -1,7 +1,6 @@
 pub use crate::board::*;
 pub use crate::transposition_table::*;
 pub use crate::uci::*;
-use std::cmp::min;
 use std::time::Instant;
 use std::sync::RwLock;
 
