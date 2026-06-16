@@ -67,6 +67,7 @@ pub struct Searcher<'a> {
     search_ms: u128,
     nodes: u128,
     transposition_table: &'a RwLock<TranspositionTable>,
+    history_table: HistoryTable,
     options: StoredOptions,
 }
 
@@ -81,6 +82,7 @@ impl<'a> Searcher<'a> {
             search_ms: 0,
             nodes: 0,
             transposition_table,
+            history_table: HistoryTable::default(),
             options
         }
     }
@@ -148,9 +150,9 @@ impl<'a> Searcher<'a> {
         self.board.gen_legal_moves(&mut mvs, qsearch);
 
         if let Some(entry) = tt_entry {
-            self.board.sort(&mut mvs, entry.best_move);
+            self.board.sort(&mut mvs, entry.best_move, &self.history_table);
         } else {
-            self.board.sort(&mut mvs, Move::null());
+            self.board.sort(&mut mvs, Move::null(), &self.history_table);
         }
 
         // Main Search
@@ -198,8 +200,18 @@ impl<'a> Searcher<'a> {
                 }
 
                 // Alpha beta pruning
-                if eval > alpha {alpha = eval;mvtype = Fail::NoFail}
-                if alpha >= beta {mvtype = Fail::FailHigh;break;}
+                if eval > alpha {
+                    alpha = eval;
+                    mvtype = Fail::NoFail;
+                }
+                if alpha >= beta {
+                    mvtype = Fail::FailHigh;
+                    
+                    if self.board.piece_on_sq_maybe(mv.to.trailing_zeros() as usize) == 0 {
+                        self.history_table.update(mv, depth);
+                    }
+                    break;
+                }
             }
         }
 
@@ -230,6 +242,7 @@ impl<'a> Searcher<'a> {
     }
 
     pub fn search_to_depth(&mut self, depth: i32) -> Move {
+        self.history_table = HistoryTable::default();
         self.search_ms = 0;
         self.root_best_eval = -30000;
         self.search_best_eval = -30000;
@@ -286,6 +299,7 @@ impl<'a> Searcher<'a> {
     }
 
     pub fn search_for_ms(&mut self, ms: u128) -> Move {
+        self.history_table = HistoryTable::default();
         self.search_ms = ms;
         self.root_best_eval = -30000;
         self.search_best_eval = -30000;

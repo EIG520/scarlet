@@ -105,3 +105,26 @@ impl TranspositionTable {
         self.table = vec![Transposition::empty(); new_size];
     }
 }
+
+pub struct HistoryTable {
+    data: [[[i32; 64]; 64]; 12]
+}
+
+impl HistoryTable {
+    pub fn probe(&self, mv: Move) -> i32 {
+        self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize]
+    }
+
+    pub fn update(&mut self, mv: Move, depth: i32) {
+        let bonus = (depth * depth).clamp(-7000, 7000);
+
+        self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] += 
+            depth * depth - self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] * bonus.abs() / 7000;
+    }
+}
+
+impl Default for HistoryTable {
+    fn default() -> Self {
+        Self { data: [[[0; 64]; 64]; 12] }
+    }
+}
