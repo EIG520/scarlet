@@ -186,14 +186,8 @@ impl<'a> Searcher<'a> {
             } else {
                 eval = -self.search(depth-1 + ext,  -beta, -alpha, ply + 1, donull, timer);
             }
-
-
             
             self.board.undo();
-
-            // if root {
-            //     println!("move {} eval {}", move_to_chess(mv), eval);
-            // }
 
             if eval > best {
                 best = eval;
