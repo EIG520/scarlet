@@ -91,8 +91,7 @@ impl<'a> Searcher<'a> {
         self.nodes += 1;
 
         let root: bool = ply == 0;
-        self.board.gen_hit_squares(); // maybe remove this line later
-        let incheck = self.board.attacked() & self.board.get_bitboard(PieceType::WhiteKing.shiftedby(self.board.color())) > 0;
+        let incheck = self.board.in_check();
         let pv = alpha != beta - 1;
         let qsearch: bool = depth <= 0;
         let reduce = !pv && !incheck;
@@ -171,15 +170,21 @@ impl<'a> Searcher<'a> {
 
             self.board.make_move(&mv);
 
+            let mut ext = 0;
+
+            if self.board.in_check() {
+                ext += 1;
+            }
+
             let mut eval;
             if i > 0 {
-                eval = -self.search(depth-1,  -alpha - 1, -alpha, ply + 1, donull, timer);
+                eval = -self.search(depth-1 + ext,  -alpha - 1, -alpha, ply + 1, donull, timer);
 
                 if eval > alpha && eval < beta {
-                    eval = -self.search(depth-1,  -beta, -alpha, ply + 1, donull, timer);
+                    eval = -self.search(depth-1 + ext,  -beta, -alpha, ply + 1, donull, timer);
                 }
             } else {
-                eval = -self.search(depth-1,  -beta, -alpha, ply + 1, donull, timer);
+                eval = -self.search(depth-1 + ext,  -beta, -alpha, ply + 1, donull, timer);
             }
 
 

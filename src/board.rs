@@ -565,6 +565,11 @@ impl Board {
         self.state.bitboards[piece_type as usize]
     }
 
+    pub fn in_check(&mut self) -> bool {
+        self.gen_hit_squares(); // maybe remove this line later
+        self.attacked() & self.get_bitboard(PieceType::WhiteKing.shiftedby(self.color())) > 0
+    }
+
     pub fn color(&self) -> Color {
         self.side_to_move
     }
