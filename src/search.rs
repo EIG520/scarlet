@@ -318,7 +318,13 @@ impl<'a> Searcher<'a> {
             if depth == 100 {break}
 
             depth += 1;
-            self.search(depth, -30000, 30000, 0, true, timer);
+            let peval = self.root_best_eval;
+
+            self.search(depth, peval - 20, peval + 20, 0, true, timer);
+
+            if self.root_best_eval <= peval - 20 || self.root_best_eval >= peval + 20 {
+                self.search(depth, -30000, 30000, 0, true, timer);
+            }
 
             if timer.elapsed().as_millis() > 0 {
                 print!("info depth {} nodes {} nps {} score cp {} time {}", depth, self.nodes, 1000 * self.nodes / timer.elapsed().as_millis(), self.root_best_eval, timer.elapsed().as_millis());
