@@ -3,12 +3,12 @@ use crate::uci::HistoryTable;
 pub use partial_sort;
 
 impl Board {
-    pub fn sort(&mut self, mvs: &mut MoveList, best_move: Move, hist: &HistoryTable) {
+    pub fn sort(&mut self, mvs: &mut MoveList, best_move: Move, hist: &HistoryTable, depth: i32) {
         mvs.moves.sort_unstable_by_key(|&a| 
-            -self.value(a, best_move, hist)
+            -self.value(a, best_move, hist, depth)
         );
     }
-    pub fn value(&self, mv: Move, bm: Move, hist: &HistoryTable) -> i32 {    
+    pub fn value(&self, mv: Move, bm: Move, hist: &HistoryTable, depth: i32) -> i32 {    
         // mvv-lva
         if mv == bm {
             return 999999999;
@@ -18,6 +18,10 @@ impl Board {
 
         if posq != 0 {
             return posq * 10000000 - mv.piece_type as i32;
+        }
+
+        if hist.get_killer(depth).clone() == mv {
+            return 9000000;
         }
         
         hist.probe(mv) as i32

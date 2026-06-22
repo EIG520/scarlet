@@ -107,7 +107,8 @@ impl TranspositionTable {
 }
 
 pub struct HistoryTable {
-    data: [[[i32; 64]; 64]; 12]
+    data: [[[i32; 64]; 64]; 12],
+    killers: [Move; 100]
 }
 
 impl HistoryTable {
@@ -121,10 +122,18 @@ impl HistoryTable {
         self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] += 
             depth * depth - self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] * bonus.abs() / 7000;
     }
+
+    pub fn add_killer(&mut self, mv: Move, depth: i32) {
+        self.killers[depth.clamp(0, self.killers.len() as i32 - 1) as usize] = mv;
+    }
+
+    pub fn get_killer(&self, depth: i32) -> Move {
+        self.killers[depth.clamp(0, self.killers.len() as i32 - 1) as usize]
+    }
 }
 
 impl Default for HistoryTable {
     fn default() -> Self {
-        Self { data: [[[0; 64]; 64]; 12] }
+        Self { data: [[[0; 64]; 64]; 12], killers: [Move::null(); 100] }
     }
 }

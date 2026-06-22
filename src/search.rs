@@ -149,9 +149,9 @@ impl<'a> Searcher<'a> {
         self.board.gen_legal_moves(&mut mvs, qsearch);
 
         if let Some(entry) = tt_entry {
-            self.board.sort(&mut mvs, entry.best_move, &self.history_table);
+            self.board.sort(&mut mvs, entry.best_move, &self.history_table, depth);
         } else {
-            self.board.sort(&mut mvs, Move::null(), &self.history_table);
+            self.board.sort(&mut mvs, Move::null(), &self.history_table, depth);
         }
 
         // Main Search
@@ -167,6 +167,7 @@ impl<'a> Searcher<'a> {
 
             let mv = mvs.moves[i];
 
+            let is_capture = mv.to & (self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces)) != 0;
 
             self.board.make_move(&mv);
 
@@ -223,6 +224,11 @@ impl<'a> Searcher<'a> {
                     if self.board.piece_on_sq_maybe(mv.to.trailing_zeros() as usize) == 0 {
                         self.history_table.update(mv, depth);
                     }
+
+                    if depth > 0 && !is_capture {
+                        self.history_table.add_killer(mv, depth);
+                    }
+
                     break;
                 }
             }
