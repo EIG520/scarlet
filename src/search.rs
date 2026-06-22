@@ -149,9 +149,9 @@ impl<'a> Searcher<'a> {
         self.board.gen_legal_moves(&mut mvs, qsearch);
 
         if let Some(entry) = tt_entry {
-            self.board.sort(&mut mvs, entry.best_move, &self.history_table, depth);
+            self.board.sort(&mut mvs, entry.best_move, &self.history_table, ply);
         } else {
-            self.board.sort(&mut mvs, Move::null(), &self.history_table, depth);
+            self.board.sort(&mut mvs, Move::null(), &self.history_table, ply);
         }
 
         // Main Search
@@ -226,7 +226,7 @@ impl<'a> Searcher<'a> {
                     }
 
                     if depth > 0 && !is_capture {
-                        self.history_table.add_killer(mv, depth);
+                        self.history_table.add_killer(mv, ply as i32);
                     }
 
                     break;

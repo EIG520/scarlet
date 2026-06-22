@@ -123,12 +123,12 @@ impl HistoryTable {
             depth * depth - self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] * bonus.abs() / 7000;
     }
 
-    pub fn add_killer(&mut self, mv: Move, depth: i32) {
-        self.killers[depth.clamp(0, self.killers.len() as i32 - 1) as usize] = mv;
+    pub fn add_killer(&mut self, mv: Move, ply: i32) {
+        self.killers[ply.clamp(0, self.killers.len() as i32 - 1) as usize] = mv;
     }
 
-    pub fn get_killer(&self, depth: i32) -> Move {
-        self.killers[depth.clamp(0, self.killers.len() as i32 - 1) as usize]
+    pub fn get_killer(&self, ply: i32) -> Move {
+        self.killers[ply.clamp(0, self.killers.len() as i32 - 1) as usize]
     }
 }
 
