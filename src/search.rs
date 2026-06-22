@@ -176,15 +176,29 @@ impl<'a> Searcher<'a> {
                 ext += 1;
             }
 
-            let mut eval;
-            if i > 0 {
+            let red = if depth > 0 && i > 2 { 
+                (0.2 + (depth as f32).ln() * (mvs.moves.len() as f32).ln() / 3.3).round() as i32
+            } else {
+                0
+            };
+
+            let mut eval = 67;
+            if i > 0 && pv {
                 eval = -self.search(depth-1 + ext,  -alpha - 1, -alpha, ply + 1, donull, timer);
 
                 if eval > alpha && eval < beta {
                     eval = -self.search(depth-1 + ext,  -beta, -alpha, ply + 1, donull, timer);
                 }
             } else {
-                eval = -self.search(depth-1 + ext,  -beta, -alpha, ply + 1, donull, timer);
+                assert!(red >= 0);
+
+                if red != 0 {
+                    eval = -self.search(depth-1 + ext - red,  -beta, -alpha, ply + 1, donull, timer);
+                }
+
+                if red == 0 || eval > alpha {
+                    eval = -self.search(depth-1 + ext,  -beta, -alpha, ply + 1, donull, timer);
+                }
             }
             
             self.board.undo();
