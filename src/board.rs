@@ -646,6 +646,30 @@ impl Board {
         }
         flag
     }
+
+    pub fn output(&self) {
+        for x in 0..8 {
+            for y in 0..8 {
+                print!("{}", match self.piece_on_sq_maybe(8 * x + y) {
+                    0 => ".",
+                    1 => "p",
+                    2 => "P",
+                    3 => "n",
+                    4 => "N",
+                    5 => "b",
+                    6 => "B",
+                    7 => "r",
+                    8 => "R",
+                    9 => "q",
+                    10 => "Q",
+                    11 => "k",
+                    12 => "K",
+                    _ => ""
+                });
+            }
+            println!();
+        }
+    }
 }
 
 // Some useful functions
