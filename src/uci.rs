@@ -160,7 +160,7 @@ impl UciHandler {
         match command.next() {
             Some(x) if x.parse::<u128>().is_ok() => {
                 let mut searcher: Searcher = Searcher::new(&mut self.board, &self.transposition_table, self.options);
-                searcher.search_for_ms(x.parse::<u128>().unwrap() / 20);
+                searcher.search_for_ms(x.parse::<u128>().unwrap() / 13);
                 Ok(())
             },
             _ => {Err(())}
