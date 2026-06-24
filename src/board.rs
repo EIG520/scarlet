@@ -273,16 +273,14 @@ impl Board {
             return false;
         }
 
-        let mut cnt = 0;
-
         while i > 0 && self.history[i].repetition_stage == self.state.repetition_stage {
             if self.history[i].zobrist_hash == self.zobrist_hash() {
-                cnt += 1;
+                return true;
             }
             i -= 1;
         }
 
-        return cnt >= 2;
+        return false;
     }
 
     // Make a move
