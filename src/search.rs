@@ -222,7 +222,7 @@ impl<'a> Searcher<'a> {
                     mvtype = Fail::FailHigh;
                     
                     if self.board.piece_on_sq_maybe(mv.to.trailing_zeros() as usize) == 0 {
-                        self.history_table.update(mv, depth);
+                        self.history_table.apply_delta(mv, depth * depth);
                     }
 
                     if depth > 0 && !is_capture {
