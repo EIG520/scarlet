@@ -120,7 +120,7 @@ impl HistoryTable {
         let bonus = (depth * depth).clamp(-7000, 7000);
 
         self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] += 
-            depth * depth - self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] * bonus.abs() / 7000;
+            bonus - self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] * bonus.abs() / 7000;
     }
 
     pub fn add_killer(&mut self, mv: Move, ply: i32) {
