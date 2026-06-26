@@ -228,7 +228,7 @@ impl<'a> Searcher<'a> {
 
         if mvs.pos == 0 {
             // in check & no moves = mate
-            if self.board.checkmask() != u64::MAX {
+            if incheck {
                 return ply as i32 - 30000;
             }
             return 0;

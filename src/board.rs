@@ -564,8 +564,8 @@ impl Board {
     }
 
     pub fn in_check(&mut self) -> bool {
-        self.gen_hit_squares(); // maybe remove this line later
-        self.attacked() & self.get_bitboard(PieceType::WhiteKing.shiftedby(self.color())) > 0
+        self.gen_checkmask();
+        self.checkmask() != u64::MAX
     }
 
     pub fn color(&self) -> Color {
