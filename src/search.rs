@@ -88,19 +88,20 @@ impl<'a> Searcher<'a> {
     }
 
     pub fn search(&mut self, depth: i32, mut alpha: i32, beta: i32, ply: u32, donull: bool, timer:Instant) -> i32 {
+        if depth <= 0 { return self.qsearch(alpha, beta, ply) }
+        
         self.nodes += 1;
 
         let root: bool = ply == 0;
         let incheck = self.board.in_check();
         let pv = alpha != beta - 1;
-        let qsearch: bool = depth <= 0;
         let reduce = !pv && !incheck;
 
         if self.board.is_repetition() && !root {return 0;}
 
         let mut tt_entry: Option<TranspositionInfo> = None;
 
-        if !qsearch && self.options.use_tt {
+        if self.options.use_tt {
             tt_entry = self.transposition_table
                 .read()
                 .expect("failed to read rwlock")
@@ -119,17 +120,8 @@ impl<'a> Searcher<'a> {
 
         let stat = self.board.eval();
 
-        // Qsearch
-        if qsearch {
-            let stand_pat = self.board.eval();
-
-            if stand_pat >= beta {
-                return beta;
-            }
-            if alpha < stand_pat {
-                alpha = stand_pat;
-            }
-        } else if !root && reduce {
+        // Pruning
+        if !root && reduce {
             // rfp
             if stat - 85 * depth >= beta { return stat; }
 
@@ -146,7 +138,7 @@ impl<'a> Searcher<'a> {
         }
 
         let mut mvs = MoveList::default();
-        self.board.gen_legal_moves(&mut mvs, qsearch);
+        self.board.gen_legal_moves(&mut mvs, false);
 
         if let Some(entry) = tt_entry {
             self.board.sort(&mut mvs, entry.best_move, &self.history_table, ply);
@@ -177,7 +169,7 @@ impl<'a> Searcher<'a> {
                 ext += 1;
             }
 
-            let red = if depth > 0 && i > 2 { 
+            let red = if i > 2 { 
                 (0.2 + (depth as f32).ln() * (mvs.moves.len() as f32).ln() / 3.3).round() as i32
             } else {
                 0
@@ -221,11 +213,11 @@ impl<'a> Searcher<'a> {
                 if alpha >= beta {
                     mvtype = Fail::FailHigh;
                     
-                    if self.board.piece_on_sq_maybe(mv.to.trailing_zeros() as usize) == 0 {
+                    if !is_capture {
                         self.history_table.apply_delta(mv, depth * depth);
                     }
 
-                    if depth > 0 && !is_capture {
+                    if !is_capture {
                         self.history_table.add_killer(mv, ply as i32);
                     }
 
@@ -235,9 +227,6 @@ impl<'a> Searcher<'a> {
         }
 
         if mvs.pos == 0 {
-            if qsearch {
-                return self.board.eval();
-            }
             // in check & no moves = mate
             if self.board.checkmask() != u64::MAX {
                 return ply as i32 - 30000;
@@ -245,7 +234,7 @@ impl<'a> Searcher<'a> {
             return 0;
         }
 
-        if !qsearch && self.options.use_tt  {
+        if self.options.use_tt  {
             self.transposition_table.write().expect("failed to lock transposition table").add(
                 self.board, depth as i8, best, best_move, mvtype
             );
@@ -256,6 +245,60 @@ impl<'a> Searcher<'a> {
             self.root_best_eval = self.search_best_eval;
         }
 
+
+        best
+    }
+
+    fn qsearch(&mut self, mut alpha: i32, beta: i32, ply: u32) -> i32 {
+        self.nodes += 1;
+
+        // let incheck = self.board.in_check();
+        // let pv = alpha != beta - 1;
+
+        if self.board.is_repetition() {return 0;}
+
+        // Stand pat check
+        let stat = self.board.eval();
+        if stat >= beta {
+            return beta;
+        }
+        if alpha < stat {
+            alpha = stat;
+        }
+
+        // Move generation
+        let mut mvs = MoveList::default();
+        self.board.gen_legal_moves(&mut mvs, true);
+        self.board.sort(&mut mvs, Move::null(), &self.history_table, ply);
+
+        // Main search
+        let mut best = -30000;
+
+        for i in 0..mvs.pos {
+            let mv = mvs.moves[i];
+            
+            self.board.make_move(&mv);
+
+            let eval = -self.qsearch(-beta, -alpha, ply + 1);
+
+            self.board.undo();
+
+            if eval > best {
+                best = eval;
+
+                if eval > alpha {
+                    alpha = eval;
+                }
+
+                if alpha >= beta {
+                    break;
+                }
+            }
+        }
+
+        if mvs.pos == 0 {
+            return stat;
+        }
 
         best
     }
