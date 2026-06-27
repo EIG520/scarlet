@@ -160,6 +160,23 @@ impl<'a> Searcher<'a> {
             let mv = mvs.moves[i];
 
             let is_capture = mv.to & (self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces)) != 0;
+            let is_qpromo = mv.flag == Flag::QueenPromotion;
+
+            // moveloop pruning (thank you amber21!!!)
+            if !root && !incheck && best >= -20000 {
+
+                // late move pruning
+                // if !pv && !is_capture && !is_qpromo && i as i32 > 5 + depth * depth && alpha.abs() < 2000 && beta < 20000 {
+                //     break;
+                // }
+
+                // futility pruning
+                if !is_capture && !is_qpromo && stat + 256 + 128 * depth < alpha && alpha.abs() < 2000 && depth <= 6 {
+                    break;
+                }
+
+
+            }
 
             self.board.make_move(&mv);
 
