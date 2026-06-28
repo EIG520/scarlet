@@ -187,7 +187,7 @@ impl<'a> Searcher<'a> {
             }
 
             let red = if i > 2 { 
-                (0.2 + (depth as f32).ln() * (mvs.moves.len() as f32).ln() / 3.3).round() as i32
+                (0.0 + (depth as f32).ln() * (i as f32).ln() / 2.0).round() as i32
             } else {
                 0
             };
@@ -195,6 +195,10 @@ impl<'a> Searcher<'a> {
             let mut eval = 67;
             if i > 0 && pv {
                 eval = -self.search(depth-1 + ext,  -alpha - 1, -alpha, ply + 1, donull, timer);
+
+                // if eval > alpha && eval < beta && red != 0 {
+                //     eval = -self.search(depth-1 + ext,  -alpha - 1, -alpha, ply + 1, donull, timer);
+                // }
 
                 if eval > alpha && eval < beta {
                     eval = -self.search(depth-1 + ext,  -beta, -alpha, ply + 1, donull, timer);
