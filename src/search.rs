@@ -186,33 +186,28 @@ impl<'a> Searcher<'a> {
                 ext += 1;
             }
 
-            let red = if i > 2 { 
-                (0.0 + (depth as f32).ln() * (i as f32).ln() / 2.0).round() as i32
-            } else {
-                0
-            };
+            let newdepth = depth - 1 + ext;
 
             let mut eval = 67;
-            if i > 0 && pv {
-                eval = -self.search(depth-1 + ext,  -alpha - 1, -alpha, ply + 1, donull, timer);
 
-                // if eval > alpha && eval < beta && red != 0 {
-                //     eval = -self.search(depth-1 + ext,  -alpha - 1, -alpha, ply + 1, donull, timer);
-                // }
+            let ireq = if pv { 999999 } else { 2 };
 
-                if eval > alpha && eval < beta {
-                    eval = -self.search(depth-1 + ext,  -beta, -alpha, ply + 1, donull, timer);
+            if i > ireq && depth >= 2 {
+                let reduction = (0.0 + (depth as f32).ln() * (i as f32).ln() / 2.0).round() as i32;
+
+                let reduced = (newdepth - reduction).clamp(0, depth - 1);
+
+                eval = -self.search(reduced, -alpha-1, -alpha, ply + 1, donull, timer);
+
+                if eval > alpha && reduced < newdepth {
+                    eval = -self.search(newdepth, -alpha-1, -alpha, ply + 1, donull, timer);
                 }
-            } else {
-                assert!(red >= 0);
+            } else if !pv || i > 0 {
+                eval = -self.search(newdepth, -alpha-1, -alpha, ply + 1, donull, timer);
+            }
 
-                if red != 0 {
-                    eval = -self.search(depth-1 + ext - red,  -beta, -alpha, ply + 1, donull, timer);
-                }
-
-                if red == 0 || eval > alpha {
-                    eval = -self.search(depth-1 + ext,  -beta, -alpha, ply + 1, donull, timer);
-                }
+            if pv && (i == 0 || eval > alpha) {
+                eval = -self.search(newdepth, -beta, -alpha, ply + 1, donull, timer);
             }
             
             self.board.undo();
