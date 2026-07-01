@@ -4,7 +4,7 @@ pub use partial_sort;
 
 impl Board {
     pub fn sort(&mut self, mvs: &mut MoveList, best_move: Move, hist: &HistoryTable, ply: u32) {
-        mvs.moves.sort_unstable_by_key(|&a| 
+        mvs.moves.sort_by_cached_key(|&a| 
             -self.value(a, best_move, hist, ply)
         );
     }
