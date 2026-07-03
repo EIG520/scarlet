@@ -10,13 +10,12 @@ pub use crate::search::*;
 use strum_macros::*;
 use strum::*;
 
-use std::sync::RwLock;
 use std::fs::File;
 use std::io::{self, BufRead};
 
 pub struct UciHandler {
     board: Board,
-    transposition_table: RwLock<TranspositionTable>,
+    transposition_table: TranspositionTable,
     options: StoredOptions,
 }
 
@@ -28,12 +27,12 @@ impl Default for UciHandler {
 
 impl UciHandler {
     pub fn new() -> Self {
-        let se = Self {
+        let mut se = Self {
             board: Board::new(),
-            transposition_table: RwLock::new(TranspositionTable::new(0)),
+            transposition_table: TranspositionTable::new(0),
             options: StoredOptions { use_tt: true },
         };
-        se.transposition_table.write().expect("dern").resize(16000000 / std::mem::size_of::<Transposition>());
+        se.transposition_table.resize(16000000 / std::mem::size_of::<Transposition>());
         se
     }
 
@@ -83,7 +82,7 @@ impl UciHandler {
                 
                 match command.next() {
                     Some(x) if x.parse::<i32>().is_ok() => {
-                        self.transposition_table.write().expect("dern").resize(x.parse::<usize>().unwrap() / std::mem::size_of::<Transposition>());
+                        self.transposition_table.resize(x.parse::<usize>().unwrap() / std::mem::size_of::<Transposition>());
                         println!("info string Elements in new TT: {}", x.parse::<usize>().unwrap() / std::mem::size_of::<Transposition>());
                         Ok(())
                     }
@@ -159,7 +158,7 @@ impl UciHandler {
     pub fn handle_time(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
         match command.next() {
             Some(x) if x.parse::<u128>().is_ok() => {
-                let mut searcher: Searcher = Searcher::new(&mut self.board, &self.transposition_table, self.options);
+                let mut searcher: Searcher = Searcher::new(&mut self.board, &mut self.transposition_table, self.options);
                 searcher.search_for_ms(x.parse::<u128>().unwrap() / 13);
                 Ok(())
             },
@@ -172,7 +171,7 @@ impl UciHandler {
         let next = command.next();
         match next {
             Some(a) if a.parse::<i32>().is_ok() => {
-                let mut searcher: Searcher = Searcher::new(&mut self.board, &self.transposition_table, self.options);
+                let mut searcher: Searcher = Searcher::new(&mut self.board, &mut self.transposition_table, self.options);
                 println!("{}",move_to_chess(searcher.search_to_depth(a.parse::<i32>().unwrap())));
                 Ok(())
             }

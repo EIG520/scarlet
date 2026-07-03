@@ -2,7 +2,6 @@ pub use crate::board::*;
 pub use crate::transposition_table::*;
 pub use crate::uci::*;
 use std::time::Instant;
-use std::sync::RwLock;
 
 impl Board {
     pub fn perft(&mut self, depth: u64) -> u64 {
@@ -66,13 +65,13 @@ pub struct Searcher<'a> {
     search_best_eval: i32,
     search_ms: u128,
     nodes: u128,
-    transposition_table: &'a RwLock<TranspositionTable>,
+    transposition_table: &'a mut TranspositionTable,
     history_table: HistoryTable,
     options: StoredOptions,
 }
 
 impl<'a> Searcher<'a> {
-    pub fn new(board: &'a mut Board, transposition_table: &'a RwLock<TranspositionTable>, options: StoredOptions) -> Self {
+    pub fn new(board: &'a mut Board, transposition_table: &'a mut TranspositionTable, options: StoredOptions) -> Self {
         Self {
             board,
             root_best: Move::null(),
@@ -103,8 +102,6 @@ impl<'a> Searcher<'a> {
 
         if self.options.use_tt {
             tt_entry = self.transposition_table
-                .read()
-                .expect("failed to read rwlock")
                 .probe(self.board);
         }
 
@@ -251,8 +248,11 @@ impl<'a> Searcher<'a> {
         }
 
         if self.options.use_tt  {
-            self.transposition_table.write().expect("failed to lock transposition table").add(
-                self.board, depth as i8, best, best_move, mvtype
+            self.transposition_table.add(
+                self.board, depth as i8, best, 
+                    if mvtype != Fail::FailLow || tt_entry.is_none() { best_move }
+                            else { tt_entry.unwrap().best_move }
+                , mvtype
             );
         }
 
@@ -364,8 +364,6 @@ impl<'a> Searcher<'a> {
 
     pub fn top_move(&self) -> Option<Move> {
         let entry = self.transposition_table
-            .read()
-            .expect("")
             .probe(self.board);
 
         if let Some(info) = entry {
