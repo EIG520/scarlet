@@ -126,7 +126,7 @@ impl<'a> Searcher<'a> {
             if stat - 85 * depth >= beta { return stat; }
 
             // null move pruning
-            if donull && depth > 2 {
+            if donull && depth > 2 && stat >= beta {
                 self.board.make_null_move();
 
                 let eval = -self.search(depth - 3, -beta, 1-beta, ply + 1, false, timer);
