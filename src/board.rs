@@ -670,6 +670,177 @@ impl Board {
     }
 }
 
+const SEE_VALS: [i32; 12] = [100, -100, 300, -300, 300, -300, 500, -500, 900, -900, 0, 0];
+
+impl Board {
+    pub fn see_capture(&mut self, mv: Move, threshold: i32) -> bool {
+        let old_wbb = self.get_bitboard(WhitePieces);
+        let old_bbb = self.get_bitboard(BlackPieces);
+
+        let sq = mv.to;
+        let sqtz = mv.to.trailing_zeros() as usize;
+
+        let mut val: i32 = match self.piece_on_sq_maybe(sq.trailing_zeros() as usize) {
+            0 => { 0 }
+            n => { -SEE_VALS[n - 1] }
+        };
+
+        let pt = PieceType::WhitePieces.shiftedby(self.color());
+        self.set_bitboard(pt, self.get_bitboard(pt) ^ mv.from);
+
+        val += match mv.flag {
+            QueenPromotion => 800,
+            RookPromotion => 400,
+            BishopPromotion | KnightPromotion => 200,
+            BlackEnPassant => 100,
+            WhiteEnPassant => 100,
+            _ => 0,
+        } * (self.color() as i32 * 2 - 1);
+
+
+        let mut threatened = match mv.flag { 
+            QueenPromotion => WhiteQueen.shiftedby(self.color()),
+            RookPromotion => WhiteRook.shiftedby(self.color()),
+            BishopPromotion => WhiteBishop.shiftedby(self.color()),
+            KnightPromotion => WhiteKnight.shiftedby(self.color()),
+
+            _ => mv.piece_type
+        } as usize;
+
+        let wpawns = self.get_bitboard(WhitePawn) & self.bpawn_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces);
+        let bpawns = self.get_bitboard(BlackPawn) & self.wpawn_bbmoves_atk(sqtz) & self.get_bitboard(BlackPieces);
+
+        let wknights = self.get_bitboard(WhiteKnight) & self.knight_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces);
+        let bknights = self.get_bitboard(BlackKnight) & self.knight_bbmoves_atk(sqtz) & self.get_bitboard(BlackPieces);
+
+        let wbishs = self.get_bitboard(WhiteBishop) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces);
+        let bbishs = self.get_bitboard(BlackBishop) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(BlackPieces);
+
+        let wrooks = self.get_bitboard(WhiteRook) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces);
+        let brooks = self.get_bitboard(BlackRook) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(BlackPieces);
+
+        let wqueens = self.get_bitboard(WhiteQueen) & self.queen_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces);
+        let bqueens = self.get_bitboard(BlackQueen) & self.queen_bbmoves_atk(sqtz) & self.get_bitboard(BlackPieces);
+
+
+        let infotab = [vec![bqueens, brooks, bbishs, bknights, bpawns],vec![wqueens, wrooks, wbishs, wknights, wpawns]];
+
+        let mut opp = infotab[self.color().swapped() as usize].clone();
+        let mut all = infotab[self.color() as usize].clone();
+
+        loop {
+            // println!("{:?}", opp);
+            // println!("{:?}", all);
+            // println!("{} <? {threshold}", val * (self.color() as i32 * 2 - 1));
+
+            if val * (self.color() as i32 * 2 - 1) < threshold {
+                break;
+            }
+            while !opp.is_empty() && opp[opp.len() - 1] == 0 {
+                opp.pop();
+            }
+
+            if opp.is_empty() {
+                while !all.is_empty() && all[all.len() - 1] == 0 {
+                    all.pop();
+                }
+
+                if all.is_empty() && self.king_bbmoves_atk(sqtz) & self.get_bitboard(WhiteKing.shiftedby(self.color())) == 0 && self.king_bbmoves_atk(sqtz) & self.get_bitboard(WhiteKing.shiftedby(self.color().swapped())) != 0 {
+                    val -= SEE_VALS[threatened];
+                }
+
+                break;
+            }
+
+            let olm = opp.len() - 1;
+            let pt = PieceType::WhitePieces.shiftedby(self.color().swapped());
+            self.set_bitboard(pt, self.get_bitboard(pt) ^ opp[olm].blsi());
+            opp[olm] &= opp[olm] - 1;
+
+            val -= SEE_VALS[threatened];
+            threatened = (4 - olm) * 2 + if self.color() == White { 1 } else { 0 };
+
+            if olm == 1 || olm == 0 {
+                while all.len() < 2 { all.push(0); }
+                all[1] |= self.get_bitboard(WhiteRook.shiftedby(self.color())) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color()));
+                all[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color())) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color()));
+
+                while opp.len() < 2 { opp.push(0); }
+                opp[1] |= self.get_bitboard(WhiteRook.shiftedby(self.color().swapped())) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
+                opp[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color().swapped())) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
+            }
+
+            if olm == 4 || olm == 2 || olm == 0 {
+                while all.len() < 3 { all.push(0); }
+                all[2] |= self.get_bitboard(WhiteBishop.shiftedby(self.color())) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color()));
+                all[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color())) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color()));
+
+                while opp.len() < 3 { opp.push(0); }
+                opp[2] |= self.get_bitboard(WhiteBishop.shiftedby(self.color().swapped())) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
+                opp[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color().swapped())) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
+            }
+
+            // println!("{:?}", opp);
+            // println!("{:?}", all);
+            // println!("{} >=? {threshold}", val * (self.color() as i32 * 2 - 1));
+
+            if val * (self.color() as i32 * 2 - 1) >= threshold {
+                break;
+            }
+
+            while !all.is_empty() && all[all.len() - 1] == 0 {
+                all.pop();
+            }
+
+            if all.is_empty() {
+                while !opp.is_empty() && opp[opp.len() - 1] == 0 {
+                    opp.pop();
+                }
+
+                if opp.is_empty() && self.king_bbmoves_atk(sqtz) & self.get_bitboard(WhiteKing.shiftedby(self.color())) != 0 && self.king_bbmoves_atk(sqtz) & self.get_bitboard(WhiteKing.shiftedby(self.color().swapped())) == 0 {
+                    val -= SEE_VALS[threatened];
+                }
+
+                break;
+            }
+
+            let alm = all.len() - 1;
+            let pt = WhitePieces.shiftedby(self.color());
+            self.set_bitboard(pt, self.get_bitboard(pt) ^ all[alm].blsi());
+            all[alm] &= all[alm] - 1;
+
+            val -= SEE_VALS[threatened];
+            threatened = (4 - alm) * 2 + if self.color() == Black { 1 } else { 0 };
+
+            if alm == 1 || alm == 0 {
+                while all.len() < 2 { all.push(0); }
+                all[1] |= self.get_bitboard(WhiteRook.shiftedby(self.color())) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color()));
+                all[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color())) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color()));
+
+                while opp.len() < 2 { opp.push(0); }
+                opp[1] |= self.get_bitboard(WhiteRook.shiftedby(self.color().swapped())) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
+                opp[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color().swapped())) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
+            }
+
+            if alm == 4 || alm == 2 || alm == 0 {
+                while all.len() < 3 { all.push(0); }
+                all[2] |= self.get_bitboard(WhiteBishop.shiftedby(self.color())) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color()));
+                all[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color())) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color()));
+
+                while opp.len() < 3 { opp.push(0); }
+                opp[2] |= self.get_bitboard(WhiteBishop.shiftedby(self.color().swapped())) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
+                opp[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color().swapped())) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
+
+            }
+        }
+        // println!();
+        self.set_bitboard(WhitePieces, old_wbb);
+        self.set_bitboard(BlackPieces, old_bbb);
+
+        val * (self.color() as i32 * 2 - 1) >= threshold
+    }
+}
+
 // Some useful functions
 const PIECE_TYPES:[PieceType; 16] = [
     WhitePawn,BlackPawn,

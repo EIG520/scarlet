@@ -138,9 +138,9 @@ impl<'a> Searcher<'a> {
         self.board.gen_legal_moves(&mut mvs, false);
 
         if let Some(entry) = tt_entry {
-            self.board.sort(&mut mvs, entry.best_move, &self.history_table, ply);
+            self.board.sort_see(&mut mvs, entry.best_move, &self.history_table, ply);
         } else {
-            self.board.sort(&mut mvs, Move::null(), &self.history_table, ply);
+            self.board.sort_see(&mut mvs, Move::null(), &self.history_table, ply);
         }
 
         // Main Search

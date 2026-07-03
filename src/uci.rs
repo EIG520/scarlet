@@ -67,6 +67,7 @@ impl UciHandler {
             Some("setoption") => self.handle_option(command),
 
             Some("d") => {print_bb(self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces));println!("{}", self.board.zobrist_hash());self.board.print_eval_info();self.board.evaluate();self.board.print_eval_info();println!("isrep: {}", self.board.is_repetition());Ok(())}
+            Some("see") => {println!("{}", self.board.see_threshold(self.board.chess_to_move(command.next().unwrap().to_string()), 0));Ok(())}
             Some("shorttest") => {self.handle_test_shortform(command)}
             _ => Ok(())
         }
@@ -403,6 +404,26 @@ pub fn test_movegen(fen: String, node_counts: Vec<i64>) -> Result<i32, ()>{
     Ok(-1)
 }
 
+pub fn test_see(fen: String, mv: String, score: i32) -> Result<i32, ()> {
+    let mut uci: UciHandler = UciHandler::new();
+
+    if let Err(()) = uci.handle_once(&mut format!("position fen {}", fen).split_whitespace()) {return Err(())}
+
+    let mv = uci.board.chess_to_move(mv);
+
+    let under = uci.board.see_threshold(mv, score - 1);
+    let at = uci.board.see_threshold(mv, score);
+    let over = uci.board.see_threshold(mv, score + 1);
+
+    if under && at && !over {
+        println!("SEE passed ({score})");
+        return Ok(0);
+    } else {
+        println!("SEE failed (goal: {score}, received: {})", at);
+        return Ok(-1);
+    }
+}
+
 pub fn test_movegen_on_suite(suite_filename: &str) -> Result<(), Box::<dyn Error>> {
     let file = File::open(suite_filename)?;
 
@@ -439,6 +460,35 @@ pub fn test_movegen_on_suite(suite_filename: &str) -> Result<(), Box::<dyn Error
             _ => {},
         }
     }
+    Ok(())
+}
+
+pub fn test_see_on_suite(suite_filename: &str) -> Result<(), Box::<dyn Error>> {
+    let file = File::open(suite_filename)?;
+
+    for line in io::BufReader::new(file).lines() {
+        let ln = line?;
+        let mut info = ln
+            .split("|")
+            .map(|i| i.to_string());
+
+        let fen = info.next().unwrap();
+        let mv = info.next().unwrap().trim().to_string();
+        let score = info.next().unwrap().trim().parse::<i32>().unwrap();
+
+        println!("fen {}", fen);
+        println!("move {}", mv);
+        println!("score {}", score);
+
+        match test_see(fen, mv, score) {
+            Err(()) => {return Err(Box::<dyn Error>::from("something bad happened"));},
+            Ok(a) if a != -1 => {},
+            Ok(-1) => {break;}
+            _ => {},        
+        }
+        println!();
+    }
+
     Ok(())
 }
 
