@@ -673,7 +673,7 @@ impl Board {
 const SEE_VALS: [i32; 12] = [100, -100, 300, -300, 300, -300, 500, -500, 900, -900, 0, 0];
 
 impl Board {
-    pub fn see_capture(&mut self, mv: Move, threshold: i32) -> bool {
+    pub fn see_threshold(&mut self, mv: Move, threshold: i32) -> bool {
         let old_wbb = self.get_bitboard(WhitePieces);
         let old_bbb = self.get_bitboard(BlackPieces);
 
