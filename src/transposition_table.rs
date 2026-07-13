@@ -5,6 +5,7 @@ pub enum Fail {
     NoFail,
     FailHigh,
     FailLow,
+    None
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -21,7 +22,7 @@ impl Transposition {
             zobrist_leftbits: 0,
             depth: 0,
             score: 1,
-            fail: Fail::NoFail,
+            fail: Fail::None,
             best_move: CompactMove::empty(),
         }
     }
@@ -92,10 +93,10 @@ impl TranspositionTable {
         }
     }
     pub fn probe(&self, board: &Board) -> Option<TranspositionInfo> {
+        let len = self.table.len() as u64;
         if self.table.len() > 0 { 
-            let idx = (board.zobrist_hash() % (self.table.len() as u64)) as usize;
-            let entry = self.table[idx];
-            if board.zobrist_hash() >> 32 == entry.zobrist_leftbits as u64 && entry != Transposition::empty() {
+            let entry = self.table[(board.zobrist_hash() % len) as usize];
+            if (board.zobrist_hash() >> 32) as u32 == entry.zobrist_leftbits && entry.fail != Fail::None {
                 return Some(TranspositionInfo::from(entry));
             }
         }

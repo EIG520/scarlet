@@ -105,14 +105,17 @@ impl<'a> Searcher<'a> {
                 .probe(self.board);
         }
 
-        if tt_entry.is_some() && !root {
-            let entry = tt_entry.unwrap();
+        if let Some(entry) = tt_entry {
+            let score = entry.score;
 
-            if entry.depth as i32 >= depth && (
-                entry.fail == Fail::NoFail
-                || entry.fail == Fail::FailHigh && entry.score >= beta
-                || entry.fail == Fail::FailLow && entry.score <= alpha) 
-            {return entry.score}
+            if !pv && entry.depth as i32 >= depth && match entry.fail {
+                Fail::NoFail => true,
+                Fail::FailHigh => score >= beta,
+                Fail::FailLow => score <= alpha,
+                Fail::None => false, // not possible
+            } {
+                return score;
+            }
         }
 
         let stat = self.board.eval();
