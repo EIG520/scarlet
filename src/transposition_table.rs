@@ -118,10 +118,10 @@ impl HistoryTable {
     }
 
     pub fn apply_delta(&mut self, mv: Move, delta: i32) {
-        let deltac = delta.clamp(-7000, 7000);
+        let deltac = delta.clamp(-512, 512);
 
         self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] +=
-            deltac - self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] * deltac  / 7000;
+            deltac - self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] * deltac.abs()  / 512;
     }
 
     pub fn add_killer(&mut self, mv: Move, ply: i32) {

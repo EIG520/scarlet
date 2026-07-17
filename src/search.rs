@@ -231,6 +231,15 @@ impl<'a> Searcher<'a> {
                     
                     if !is_capture {
                         self.history_table.apply_delta(mv, depth * depth);
+
+                        for j in 0..i {
+                            let mv2 = mvs.moves[j];
+                            let is_capture_2 = mv2.to & (self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces)) != 0;
+
+                            if !is_capture_2 {
+                                self.history_table.apply_delta(mv2, - depth * depth);
+                            }
+                        }
                     }
 
                     if !is_capture {
