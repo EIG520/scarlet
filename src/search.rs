@@ -105,6 +105,8 @@ impl<'a> Searcher<'a> {
                 .probe(self.board);
         }
 
+        let mut stat = self.board.eval();
+
         if let Some(entry) = tt_entry {
             let score = entry.score;
 
@@ -116,9 +118,11 @@ impl<'a> Searcher<'a> {
             } {
                 return score;
             }
+
+            // Use TT eval instead of static evaluation
+            stat = score;
         }
 
-        let stat = self.board.eval();
 
         // Pruning
         if !root && reduce {
