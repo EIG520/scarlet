@@ -110,6 +110,7 @@ impl<'a> Searcher<'a> {
         if let Some(entry) = tt_entry {
             let score = entry.score;
 
+            // Only worth like 10 elo, so I need to find out what's wrong at some point
             if !pv && entry.depth as i32 >= depth && match entry.fail {
                 Fail::NoFail => true,
                 Fail::FailHigh => score >= beta,
