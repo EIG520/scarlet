@@ -94,7 +94,7 @@ impl TranspositionTable {
     }
     pub fn probe(&self, board: &Board) -> Option<TranspositionInfo> {
         let len = self.table.len() as u64;
-        if self.table.len() > 0 { 
+        if len > 0 { 
             let entry = self.table[(board.zobrist_hash() % len) as usize];
             if (board.zobrist_hash() >> 32) as u32 == entry.zobrist_leftbits && entry.fail != Fail::None {
                 return Some(TranspositionInfo::from(entry));
