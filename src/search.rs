@@ -198,7 +198,7 @@ impl<'a> Searcher<'a> {
             let ireq = if pv { 999999 } else { 2 };
 
             if i > ireq && depth >= 2 {
-                let reduction = (0.0 + (depth as f32).ln() * (i as f32).ln() / 2.0).round() as i32;
+                let reduction = (1.0 + (depth as f32).ln() * (i as f32).ln() / 2.0).floor() as i32;
 
                 let reduced = (newdepth - reduction).clamp(0, depth - 1);
 
