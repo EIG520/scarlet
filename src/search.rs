@@ -289,6 +289,13 @@ impl<'a> Searcher<'a> {
         // let pv = alpha != beta - 1;
 
         if self.board.is_repetition() {return 0;}
+        
+        let mut tt_entry: Option<TranspositionInfo> = None;
+
+        if self.options.use_tt {
+            tt_entry = self.transposition_table
+                .probe(self.board);
+        }
 
         // Stand pat check
         let stat = self.board.eval();
@@ -302,7 +309,11 @@ impl<'a> Searcher<'a> {
         // Move generation
         let mut mvs = MoveList::default();
         self.board.gen_legal_moves(&mut mvs, true);
-        self.board.sort(&mut mvs, Move::null(), &self.history_table, ply);
+        if let Some(entry) = tt_entry {
+            self.board.sort(&mut mvs, entry.best_move, &self.history_table, ply);
+        } else {
+            self.board.sort(&mut mvs, Move::null(), &self.history_table, ply);
+        }
 
         // Main search
         let mut best = -30000;
