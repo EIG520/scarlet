@@ -297,6 +297,19 @@ impl<'a> Searcher<'a> {
                 .probe(self.board);
         }
 
+        if let Some(entry) = tt_entry {
+            let score = entry.score;
+
+            if match entry.fail {
+                Fail::NoFail => true,
+                Fail::FailHigh => score >= beta,
+                Fail::FailLow => score <= alpha,
+                Fail::None => false, // not possible
+            } {
+                return score;
+            }
+        }
+
         // Stand pat check
         let stat = self.board.eval();
         if stat >= beta {
