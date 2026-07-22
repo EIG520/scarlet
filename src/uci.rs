@@ -83,8 +83,8 @@ impl UciHandler {
                 
                 match command.next() {
                     Some(x) if x.parse::<i32>().is_ok() => {
-                        self.transposition_table.resize(x.parse::<usize>().unwrap() / std::mem::size_of::<Transposition>());
-                        println!("info string Elements in new TT: {}", x.parse::<usize>().unwrap() / std::mem::size_of::<Transposition>());
+                        self.transposition_table.resize(1000000 * x.parse::<usize>().unwrap() / std::mem::size_of::<Transposition>());
+                        println!("info string Elements in new TT: {}", 1000000 * x.parse::<usize>().unwrap() / std::mem::size_of::<Transposition>());
                         Ok(())
                     }
                     _ => {Ok(())}
