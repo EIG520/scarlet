@@ -86,7 +86,7 @@ impl<'a> Searcher<'a> {
         }
     }
 
-    pub fn search(&mut self, depth: i32, mut alpha: i32, beta: i32, ply: u32, donull: bool, timer:Instant) -> i32 {
+    pub fn search(&mut self, mut depth: i32, mut alpha: i32, beta: i32, ply: u32, donull: bool, timer:Instant) -> i32 {
         if depth <= 0 { return self.qsearch(alpha, beta, ply) }
         
         self.nodes += 1;
@@ -121,6 +121,8 @@ impl<'a> Searcher<'a> {
 
             // Use TT eval instead of static evaluation
             stat = score;
+        } else if depth > 4 {
+            depth -= 1;
         }
 
 
