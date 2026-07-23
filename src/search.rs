@@ -172,9 +172,9 @@ impl<'a> Searcher<'a> {
             if !root && !incheck && best >= -20000 {
 
                 // late move pruning
-                // if !pv && !is_capture && !is_qpromo && i as i32 > 5 + depth * depth && alpha.abs() < 2000 && beta < 20000 {
-                //     break;
-                // }
+                if !pv && !is_capture && !is_qpromo && i as i32 > 5 + depth * depth && alpha.abs() < 2000 && beta < 20000 {
+                    break;
+                }
 
                 // futility pruning
                 if !is_capture && !is_qpromo && stat + 256 + 128 * depth < alpha && alpha.abs() < 2000 && depth <= 6 {
