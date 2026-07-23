@@ -196,7 +196,7 @@ impl<'a> Searcher<'a> {
 
             let mut eval = 67;
 
-            let ireq = if pv { 999999 } else { 2 };
+            let ireq = if pv { 6 } else { 2 };
 
             if i > ireq && depth >= 2 {
                 let reduction = (
