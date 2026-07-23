@@ -86,7 +86,7 @@ impl<'a> Searcher<'a> {
         }
     }
 
-    pub fn search(&mut self, mut depth: i32, mut alpha: i32, beta: i32, ply: u32, donull: bool, timer:Instant) -> i32 {
+    pub fn search(&mut self, mut depth: i32, mut alpha: i32, beta: i32, ply: u32, timer:Instant) -> i32 {
         if depth <= 0 { return self.qsearch(alpha, beta, ply) }
         
         self.nodes += 1;
@@ -132,10 +132,10 @@ impl<'a> Searcher<'a> {
             if stat - 85 * depth >= beta { return stat; }
 
             // null move pruning
-            if donull && depth > 2 && stat >= beta {
+            if depth > 2 && stat >= beta {
                 self.board.make_null_move();
 
-                let eval = -self.search(depth - 3, -beta, 1-beta, ply + 1, false, timer);
+                let eval = -self.search((depth * 100 + beta - stat) / 200 - 1, -beta, 1-beta, ply + 1, timer);
             
                 self.board.unmake_null_move();
 
@@ -203,17 +203,17 @@ impl<'a> Searcher<'a> {
 
                 let reduced = (newdepth - reduction).clamp(0, depth - 1);
 
-                eval = -self.search(reduced, -alpha-1, -alpha, ply + 1, donull, timer);
+                eval = -self.search(reduced, -alpha-1, -alpha, ply + 1, timer);
 
                 if eval > alpha && reduced < newdepth {
-                    eval = -self.search(newdepth, -alpha-1, -alpha, ply + 1, donull, timer);
+                    eval = -self.search(newdepth, -alpha-1, -alpha, ply + 1, timer);
                 }
             } else if !pv || i > 0 {
-                eval = -self.search(newdepth, -alpha-1, -alpha, ply + 1, donull, timer);
+                eval = -self.search(newdepth, -alpha-1, -alpha, ply + 1, timer);
             }
 
             if pv && (i == 0 || eval > alpha) {
-                eval = -self.search(newdepth, -beta, -alpha, ply + 1, donull, timer);
+                eval = -self.search(newdepth, -beta, -alpha, ply + 1, timer);
             }
             
             self.board.undo();
@@ -370,7 +370,7 @@ impl<'a> Searcher<'a> {
 
         let timer = Instant::now();
 
-        self.search(depth as i32, -30000, 30000, 0, true, timer);
+        self.search(depth as i32, -30000, 30000, 0, timer);
 
         if timer.elapsed().as_millis() > 0 {
             print!("info depth {} nodes {} nps {} score cp {} time {}", depth, self.nodes, 1000 * self.nodes / timer.elapsed().as_millis(), self.root_best_eval, timer.elapsed().as_millis());
@@ -433,10 +433,10 @@ impl<'a> Searcher<'a> {
             depth += 1;
             let peval = self.root_best_eval;
 
-            self.search(depth, peval - 20, peval + 20, 0, true, timer);
+            self.search(depth, peval - 20, peval + 20, 0, timer);
 
             if self.root_best_eval <= peval - 20 || self.root_best_eval >= peval + 20 {
-                self.search(depth, -30000, 30000, 0, true, timer);
+                self.search(depth, -30000, 30000, 0, timer);
             }
 
             if timer.elapsed().as_millis() > 0 {
