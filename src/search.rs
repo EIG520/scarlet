@@ -317,7 +317,7 @@ impl<'a> Searcher<'a> {
         // Stand pat check
         let stat = self.board.eval();
         if stat >= beta {
-            return beta;
+            return (stat + beta) / 2;
         }
         if alpha < stat {
             alpha = stat;
