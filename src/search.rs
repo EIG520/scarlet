@@ -333,7 +333,7 @@ impl<'a> Searcher<'a> {
         }
 
         // Main search
-        let mut best = alpha;
+        let mut best = stat;
 
         for i in 0..mvs.pos {
             let mv = mvs.moves[i];
