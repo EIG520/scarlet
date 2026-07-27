@@ -31,4 +31,4 @@ Scarlet is not currently tested on any rating lists, but it is estimated to be +
 
 Find and download the binary from releases most fitting your system, then run that executable. <br>
 Alternatively, you can build the project yourself. Ensure both rust and cargo are installed, enter the main directory of the project, and run
-`cargo build --release`.  After this, the executable for the chess engine will be in target/release. 
+`cargo build --bin scarlet --release`.  After this, the executable for the chess engine will be in target/release. 
