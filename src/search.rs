@@ -365,6 +365,7 @@ impl<'a> Searcher<'a> {
     }
 
     pub fn search_to_depth(&mut self, depth: i32) -> Move {
+        self.board.populate_accumulators();
         self.history_table = HistoryTable::default();
         self.search_ms = 0;
         self.root_best_eval = -30000;
@@ -425,6 +426,7 @@ impl<'a> Searcher<'a> {
         self.root_best_eval = -30000;
         self.search_best_eval = -30000;
         self.nodes = 0;
+        self.board.populate_accumulators();
         let timer = Instant::now();
 
         let mut depth = 0;
@@ -471,5 +473,32 @@ impl<'a> Searcher<'a> {
         }
         println!("bestmove {}", move_to_chess(self.root_best));
         self.root_best
+    }
+
+    pub fn reset_info(&mut self) {
+        self.history_table = HistoryTable::default();
+        self.root_best_eval = -30000;
+        self.search_best_eval = -30000;
+        self.nodes = 0;
+    }
+
+    pub fn nodes(&mut self) -> u128 {
+        self.nodes
+    }
+
+    pub fn root_best_move(&mut self) -> Move {
+        self.root_best
+    }
+
+    pub fn root_eval(&mut self) -> i32 {
+        self.root_best_eval
+    }
+
+    pub fn white_eval(&mut self) -> i32 {
+        self.root_eval() * if self.board.color() == Color::White { 1 } else { -1 }
+    }
+
+    pub fn set_search_ms(&mut self, ms: u128) {
+        self.search_ms = ms;
     }
 }

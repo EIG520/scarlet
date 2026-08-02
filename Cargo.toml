@@ -28,4 +28,6 @@ partial_sort = "0.2.0"
 smallvec = "1.11.2"
 strum = "0.25.0"
 strum_macros = "0.25.3"
-bullet = { git = "https://github.com/jw1912/bullet", package = "bullet_lib" }
+bullet = { git = "https://github.com/jw1912/bullet", package = "bullet_lib", features = ["cuda"] }
+rand = "0.9.5"
+tokio = {version = "1.53.1", features = ["full"] }

@@ -3,6 +3,7 @@ pub use fxhash::FxHashSet;
 use smallvec::{SmallVec, smallvec};
 
 pub use crate::board;
+use crate::evaluate::Accumulator;
 pub use crate::moves;
 pub use crate::utils::*;
 pub use crate::turn::*;
@@ -104,11 +105,13 @@ pub struct BoardState {
     // Bitboards
     bitboards: [u64; 16],
     zobrist_hash: u64,
+    
     repetition_bloom: u64,
     repetition_stage: u16,
-    mg_eval: i32,
-    eg_eval: i32,
-    phase: i32,
+    
+    eval: i32,
+    waccum: Accumulator,
+    baccum: Accumulator,
 
     // 50 Move Rule Counter (unused)
     move_counter: u64,
@@ -119,11 +122,11 @@ impl BoardState {
         BoardState {
             bitboards:[65280, 71776119061217280, 66, 4755801206503243776, 36, 2594073385365405696, 129, 9295429630892703744, 16, 1152921504606846976, 8, 576460752303423488,65535, 18446462598732840960,0b1111,0,],
             zobrist_hash:0,
-            mg_eval: 0,
+            eval: 0,
             repetition_stage: 0,
             repetition_bloom: 0,
-            eg_eval: 0,
-            phase: 0,
+            waccum: Accumulator::default(),
+            baccum: Accumulator::default(),
             move_counter:0,
         }
     }
@@ -133,9 +136,9 @@ impl BoardState {
             zobrist_hash: self.zobrist_hash,
             repetition_bloom: self.repetition_bloom,
             repetition_stage: self.repetition_stage,
-            mg_eval: self.mg_eval,
-            eg_eval: self.eg_eval,
-            phase: self.phase,
+            eval: self.eval,
+            waccum: self.waccum,
+            baccum: self.baccum,
             move_counter: self.move_counter
         }
     }
@@ -188,32 +191,26 @@ impl Board {
     pub fn set_zobrist_hash(&mut self, new_hash: u64) {
         self.state.zobrist_hash = new_hash;
     }
-    pub fn set_mg_eval(&mut self, new_eval: i32) {
-        self.state.mg_eval = new_eval;
+    pub fn set_waccum(&mut self, new: Accumulator) {
+        self.state.waccum = new;
     }
-    pub fn set_eg_eval(&mut self, new_eval: i32) {
-        self.state.eg_eval = new_eval;
+    pub fn set_baccum(&mut self, new: Accumulator) {
+        self.state.baccum = new;
     }
-    pub fn set_phase(&mut self, new_phase: i32) {
-        self.state.phase = new_phase;
+    pub fn get_waccum(&self) -> Accumulator {
+        self.state.waccum
     }
-    pub fn mg_eval(&self) -> i32 {
-        self.state.mg_eval
+    pub fn get_baccum(&self) -> Accumulator {
+        self.state.baccum
     }
-    pub fn eg_eval(&self) -> i32 {
-        self.state.eg_eval
+    pub fn get_waccum_mut(&mut self) -> &mut Accumulator {
+        &mut self.state.waccum
     }
-    pub fn phase(&self) -> i32 {
-        self.state.phase
+    pub fn get_baccum_mut(&mut self) -> &mut Accumulator {
+        &mut self.state.baccum
     }
-    pub fn eval(&self) -> i32 {
-        (self.state.phase * self.state.mg_eval / 30 + (30 - self.state.phase) * self.state.eg_eval / 30) * (self.color() as i32 * 2 - 1)
-    }
-    pub fn print_eval_info(&self) {
+    pub fn print_eval_info(&mut self) {
         println!("eval: {}", self.eval());
-        println!("  phase: {}", self.state.phase);
-        println!("  mg eval: {}", self.mg_eval());
-        println!("  eg eval: {}", self.eg_eval());
     }
 
     pub fn set_bitboard(&mut self, piece_type: PieceType, new_bitboard: u64) {
@@ -542,7 +539,7 @@ impl Board {
     // british init???!?!?!!?!
     pub fn init(&mut self) {
         self.gen_zobrist_hash();
-        self.evaluate();
+        self.populate_accumulators();
     }
 
     pub fn undo(&mut self) {
