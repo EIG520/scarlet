@@ -66,7 +66,7 @@ impl UciHandler {
             Some("position") => self.handle_position(command),
             Some("setoption") => self.handle_option(command),
 
-            Some("d") => {print_bb(self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces));println!("{}", self.board.zobrist_hash());self.board.print_eval_info();self.board.populate_accumulators();self.board.print_eval_info();println!("isrep: {}", self.board.is_repetition());Ok(())}
+            Some("d") => {print_bb(self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces));println!("{}", self.board.zobrist_hash());self.board.print_eval_info();self.board.populate_accumulators();self.board.print_eval_info();Ok(())}
             Some("see") => {println!("{}", self.board.see_threshold(self.board.chess_to_move(command.next().unwrap().to_string()), 0));Ok(())}
             Some("shorttest") => {self.handle_test_shortform(command)}
             _ => Ok(())
@@ -356,7 +356,7 @@ impl UciHandler {
         match (command.next(), command.next()) {
             (Some("moves"), m) => {self.board.init();self.handle_moves(command, m)},
             (Some(a), Some(b)) if a.parse::<u64>().is_ok() && b.parse::<u64>().is_ok() => {
-                self.board.set_move_count(b.parse::<u64>().unwrap());
+                self.board.set_move_count(b.parse::<u16>().unwrap());
                 command.next();
                 let f = command.next();
                 self.board.init();

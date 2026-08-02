@@ -114,7 +114,7 @@ pub struct BoardState {
     baccum: Accumulator,
 
     // 50 Move Rule Counter (unused)
-    move_counter: u64,
+    move_counter: u16,
 }
 
 impl BoardState {
@@ -216,7 +216,7 @@ impl Board {
     pub fn set_bitboard(&mut self, piece_type: PieceType, new_bitboard: u64) {
         self.state.bitboards[piece_type as usize] = new_bitboard;
     }
-    pub fn set_move_count(&mut self, new_count: u64) {
+    pub fn set_move_count(&mut self, new_count: u16) {
         self.state.move_counter = new_count;
     }
 
@@ -260,11 +260,10 @@ impl Board {
         self.state.bitboards[piece_type as usize % 2 + 12] |= 1 << square;
     }
 
-    pub fn is_repetition(&self) -> bool {
+    pub fn upcoming_draw(&self) -> bool {
         if self.history.len() == 0 { return false; }
 
         let mut i = self.history.len() - 1;
-
     
         if self.history[i].repetition_bloom & self.zobrist_hash() != self.zobrist_hash() {
             return false;
@@ -277,7 +276,7 @@ impl Board {
             i -= 1;
         }
 
-        return false;
+        return self.state.move_counter >= 100;
     }
 
     // Make a move
@@ -303,6 +302,7 @@ impl Board {
         if (mv.piece_type as usize) < 2 {
             self.state.repetition_stage += 1;
             self.state.repetition_bloom = 0;
+            self.state.move_counter = 0;
         }
 
         match mv.flag {
@@ -314,6 +314,7 @@ impl Board {
 
                     self.state.repetition_stage += 1;
                     self.state.repetition_bloom = 0;
+                    self.state.move_counter = 0;
 
                     self.clear_square(mv.to);
                 }
@@ -368,6 +369,7 @@ impl Board {
 
                 self.state.repetition_stage += 1;
                 self.state.repetition_bloom = 0;
+                self.state.move_counter = 0;
             }
             BishopPromotion => {
                 // For capture + promote
@@ -386,6 +388,7 @@ impl Board {
 
                 self.state.repetition_stage += 1;
                 self.state.repetition_bloom = 0;
+                self.state.move_counter = 0;
             }
             RookPromotion => {
                 // For capture + promote
@@ -404,6 +407,7 @@ impl Board {
 
                 self.state.repetition_stage += 1;
                 self.state.repetition_bloom = 0;
+                self.state.move_counter = 0;
             }
             QueenPromotion => {
                 // For capture + promote
@@ -422,6 +426,7 @@ impl Board {
 
                 self.state.repetition_stage += 1;
                 self.state.repetition_bloom = 0;
+                self.state.move_counter = 0;
             }
             WhiteKingsideCastle => {
                 // Move King

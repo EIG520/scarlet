@@ -96,7 +96,7 @@ impl<'a> Searcher<'a> {
         let pv = alpha != beta - 1;
         let reduce = !pv && !incheck;
 
-        if self.board.is_repetition() && !root {return 0;}
+        if self.board.upcoming_draw() && !root {return 0;}
 
         let mut tt_entry: Option<TranspositionInfo> = None;
 
@@ -292,7 +292,7 @@ impl<'a> Searcher<'a> {
         // let incheck = self.board.in_check();
         // let pv = alpha != beta - 1;
 
-        if self.board.is_repetition() {return 0;}
+        if self.board.upcoming_draw() {return 0;}
         
         let mut tt_entry: Option<TranspositionInfo> = None;
 
@@ -454,7 +454,7 @@ impl<'a> Searcher<'a> {
             
             let mut mvs = 0;
             while tm.is_some() {
-                if self.board.is_repetition() {break;}
+                if self.board.upcoming_draw() {break;}
 
                 if mvs == 0 {print!(" pv");}
 
