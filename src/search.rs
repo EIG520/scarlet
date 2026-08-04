@@ -201,7 +201,7 @@ impl<'a> Searcher<'a> {
 
             let ireq = if pv { 6 } else { 2 };
 
-            if i > ireq && depth >= 2 {
+            if i > ireq && depth >= 2 && (!is_capture && !is_qpromo) {
                 let reduction = (
                     1.0 + (depth as f32).ln() * (i as f32).ln() / 2.0
                     - self.history_table.probe(mv) as f32 / 200.0
