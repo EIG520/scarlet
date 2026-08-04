@@ -231,7 +231,7 @@ impl Board {
 
     }
 
-    pub fn eval(&self) -> i32 {
+    pub fn gen_eval(&mut self) -> i32 {
         let stm_accum = if self.color() == Color::White { self.get_waccum() } else { self.get_baccum() };
         let ntm_accum = if self.color() == Color::White { self.get_baccum() } else { self.get_waccum() };
 
@@ -249,6 +249,8 @@ impl Board {
         output *= SCALE;
 
         output /= QA as i32 * QB as i32;
+
+        self.set_eval(output);
 
         output
     }

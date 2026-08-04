@@ -142,6 +142,9 @@ impl BoardState {
             move_counter: self.move_counter
         }
     }
+    pub fn eval(&self) -> i32 {
+        self.eval
+    }
     pub fn bitboards(&self) -> [u64; 16] {
         self.bitboards
     }
@@ -209,8 +212,11 @@ impl Board {
     pub fn get_baccum_mut(&mut self) -> &mut Accumulator {
         &mut self.state.baccum
     }
+    pub fn set_eval(&mut self, eval: i32) {
+        self.state.eval = eval;
+    }
     pub fn print_eval_info(&mut self) {
-        println!("eval: {}", self.eval());
+        println!("eval: {}", self.gen_eval());
     }
 
     pub fn set_bitboard(&mut self, piece_type: PieceType, new_bitboard: u64) {
@@ -645,6 +651,18 @@ impl Board {
             }
         }
         flag
+    }
+
+    // 0 is currstate
+    pub fn get_nth_prev_boardstate(&self, n: usize) -> BoardState {
+        match n {
+            0 => self.state,
+            k => self.history[self.history.len() - k]
+        }
+    }
+
+    pub fn hist_len(&self) -> usize {
+        self.history.len()
     }
 
     pub fn output(&self) {

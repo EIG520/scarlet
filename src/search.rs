@@ -105,7 +105,7 @@ impl<'a> Searcher<'a> {
                 .probe(self.board);
         }
 
-        let mut stat = self.board.eval();
+        let mut stat = self.board.gen_eval();
 
         if let Some(entry) = tt_entry {
             let score = entry.score;
@@ -125,11 +125,14 @@ impl<'a> Searcher<'a> {
             depth -= 1;
         }
 
+        let improving = !incheck 
+            && self.board.hist_len() >= 2 
+            && self.board.state().eval() > self.board.get_nth_prev_boardstate(2).eval();
 
         // Pruning
         if !root && reduce {
             // rfp
-            if stat - 85 * depth >= beta { return stat; }
+            if stat - 85 * depth + if improving { 85 } else { 0 } >= beta { return stat; }
 
             // null move pruning
             if depth > 2 && stat >= beta {
@@ -315,7 +318,7 @@ impl<'a> Searcher<'a> {
         }
 
         // Stand pat check
-        let stat = self.board.eval();
+        let stat = self.board.gen_eval();
         if stat >= beta {
             return (stat + beta) / 2;
         }
