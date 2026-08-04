@@ -2,47 +2,6 @@ use crate::bitloop;
 pub use crate::board::*;
 
 impl Board {
-    pub fn evaluate(&mut self) {
-        // let mut eg_eval = 0;
-        // let mut mg_eval = 0;
-
-        // // Account for kings
-        // // I could just have a phase table but shut up
-        // let mut phase: i32 = -12;
-
-        // for i in 0..6 {
-        //     let mut bb = self.get_bitboard(num_to_piece(2*i));
-        //     while bb > 0 {
-        //         let pos = bb.blsi().trailing_zeros() ^ 7;
-
-        //         mg_eval += EVAL_TABLES[2*i][(pos ^ 56) as usize] + MG_PV[i];
-
-        //         eg_eval += EVAL_TABLES[2*i+1][(pos ^ 56) as usize] + EG_PV[i];
-
-        //         phase += i as i32;
-
-
-        //         bb = bb & bb-1;
-        //     }
-        //     let mut bb = self.get_bitboard(num_to_piece(2*i+1));
-        //     while bb > 0 {
-        //         let pos = bb.blsi().trailing_zeros() ^ 7;
-
-        //         mg_eval -= EVAL_TABLES[2*i][pos as usize] + MG_PV[i];
-        //         eg_eval -= EVAL_TABLES[2*i+1][pos as usize] + EG_PV[i];
-
-
-        //         phase += i as i32;
-
-
-        //         bb = bb & (bb-1);
-        //     }
-
-        // }
-        // self.set_eg_eval(eg_eval);
-        // self.set_mg_eval(mg_eval);
-        // self.set_phase(phase);
-    }
     pub fn update_eval(&mut self, piece_type: PieceType, from: u64, to: u64) {
         let offset = 384 * (piece_type as usize & 1) + (piece_type as usize >> 1) * 64;
         let acc = self.get_waccum_mut();
