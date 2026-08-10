@@ -440,10 +440,24 @@ impl<'a> Searcher<'a> {
 
             depth += 1;
             let peval = self.root_best_eval;
+            let mut win_left = 10;
+            let mut win_right = 10;
+            let mut in_bounds = false;
 
-            self.search(depth, peval - 20, peval + 20, 0, timer);
+            for _ in 0..3 {
+                self.search(depth, peval - win_left, peval + win_right, 0, timer);
 
-            if self.root_best_eval <= peval - 20 || self.root_best_eval >= peval + 20 {
+                if self.root_best_eval <= peval - win_left {
+                    win_left *= 3;
+                } else if self.root_best_eval >= peval + win_right {
+                    win_right *= 3;
+                } else {
+                    in_bounds = true;
+                    break;
+                }
+            }
+
+            if !in_bounds {
                 self.search(depth, -30000, 30000, 0, timer);
             }
 
