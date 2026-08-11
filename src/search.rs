@@ -344,6 +344,10 @@ impl<'a> Searcher<'a> {
             if i > 2 {
                 break;
             }
+
+            if !self.board.see_threshold(mv, 0) {
+                continue;
+            }
             
             self.board.make_move(&mv);
 
