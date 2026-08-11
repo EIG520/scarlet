@@ -340,6 +340,10 @@ impl<'a> Searcher<'a> {
 
         for i in 0..mvs.pos {
             let mv = mvs.moves[i];
+
+            if i > 2 {
+                break;
+            }
             
             self.board.make_move(&mv);
 
