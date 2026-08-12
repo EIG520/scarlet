@@ -109,19 +109,27 @@ impl TranspositionTable {
 
 pub struct HistoryTable {
     data: [[[i32; 64]; 64]; 12],
-    killers: [Move; 100]
+    killers: [Move; 100],
+
+    cont_1ply: Box<[[[[i32; 64]; 12]; 64]; 12]>,
 }
 
 impl HistoryTable {
-    pub fn probe(&self, mv: Move) -> i32 {
+    pub fn probe(&self, pmv: Move, mv: Move) -> i32 {
         self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize]
+        + if pmv != Move::null() { self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 }
     }
 
-    pub fn apply_delta(&mut self, mv: Move, delta: i32) {
+    pub fn apply_delta(&mut self, pmv: Move, mv: Move, delta: i32) {
         let deltac = delta.clamp(-512, 512);
 
         self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] +=
-            deltac - self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] * deltac.abs()  / 512;
+            deltac - self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] * deltac.abs() / 512;
+    
+        if pmv != Move::null() {
+            self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] +=
+                    deltac - self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] * deltac.abs() / 512;
+        }
     }
 
     pub fn add_killer(&mut self, mv: Move, ply: i32) {
@@ -135,6 +143,6 @@ impl HistoryTable {
 
 impl Default for HistoryTable {
     fn default() -> Self {
-        Self { data: [[[0; 64]; 64]; 12], killers: [Move::null(); 100] }
+        Self { data: [[[0; 64]; 64]; 12], killers: [Move::null(); 100], cont_1ply: unsafe { Box::<[[[[i32; 64]; 12]; 64]; 12]>::new_zeroed().assume_init() } }
     }
 }

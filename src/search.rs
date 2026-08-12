@@ -68,6 +68,8 @@ pub struct Searcher<'a> {
     transposition_table: &'a mut TranspositionTable,
     history_table: HistoryTable,
     options: StoredOptions,
+
+    prev_mv: Move,
 }
 
 impl<'a> Searcher<'a> {
@@ -82,7 +84,9 @@ impl<'a> Searcher<'a> {
             nodes: 0,
             transposition_table,
             history_table: HistoryTable::default(),
-            options
+            options,
+
+            prev_mv: Move::null()
         }
     }
 
@@ -95,6 +99,7 @@ impl<'a> Searcher<'a> {
         let incheck = self.board.in_check();
         let pv = alpha != beta - 1;
         let reduce = !pv && !incheck;
+        let prev_mv = self.prev_mv;
 
         if self.board.upcoming_draw() && !root {return 0;}
 
@@ -137,6 +142,7 @@ impl<'a> Searcher<'a> {
             // null move pruning
             if depth > 2 && stat >= beta {
                 self.board.make_null_move();
+                self.prev_mv = Move::null();
 
                 let eval = -self.search((depth * 100 + beta - stat) / 200 - 1, -beta, 1-beta, ply + 1, timer);
             
@@ -150,9 +156,9 @@ impl<'a> Searcher<'a> {
         self.board.gen_legal_moves(&mut mvs, false);
 
         if let Some(entry) = tt_entry {
-            self.board.sort_see(&mut mvs, entry.best_move, &self.history_table, ply);
+            self.board.sort_see(&mut mvs, entry.best_move, prev_mv, &self.history_table, ply);
         } else {
-            self.board.sort_see(&mut mvs, Move::null(), &self.history_table, ply);
+            self.board.sort_see(&mut mvs, Move::null(), prev_mv, &self.history_table, ply);
         }
 
         // Main Search
@@ -188,6 +194,7 @@ impl<'a> Searcher<'a> {
             }
 
             self.board.make_move(&mv);
+            self.prev_mv = mv;
 
             let mut ext = 0;
 
@@ -204,7 +211,7 @@ impl<'a> Searcher<'a> {
             if i > ireq && depth >= 2 && (!is_capture && !is_qpromo) {
                 let reduction = (
                     1.0 + (depth as f32).ln() * (i as f32).ln() / 2.0
-                    - self.history_table.probe(mv) as f32 / 200.0
+                    - self.history_table.probe(prev_mv, mv) as f32 / 200.0
                 ).floor() as i32;
 
                 let reduced = (newdepth - reduction).clamp(0, depth - 1);
@@ -242,14 +249,14 @@ impl<'a> Searcher<'a> {
                     mvtype = Fail::FailHigh;
                     
                     if !is_capture {
-                        self.history_table.apply_delta(mv, depth * depth);
+                        self.history_table.apply_delta(prev_mv, mv, depth * depth);
 
                         for j in 0..i {
                             let mv2 = mvs.moves[j];
                             let is_capture_2 = mv2.to & (self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces)) != 0;
 
                             if !is_capture_2 {
-                                self.history_table.apply_delta(mv2, - depth * depth);
+                                self.history_table.apply_delta(prev_mv, mv2, - depth * depth);
                             }
                         }
                     }
@@ -292,6 +299,7 @@ impl<'a> Searcher<'a> {
     fn qsearch(&mut self, mut alpha: i32, beta: i32, ply: u32) -> i32 {
         self.nodes += 1;
 
+        let prev_mv = self.prev_mv;
         // let incheck = self.board.in_check();
         // let pv = alpha != beta - 1;
 
@@ -330,9 +338,9 @@ impl<'a> Searcher<'a> {
         let mut mvs = MoveList::default();
         self.board.gen_legal_moves(&mut mvs, true);
         if let Some(entry) = tt_entry {
-            self.board.sort(&mut mvs, entry.best_move, &self.history_table, ply);
+            self.board.sort(&mut mvs, entry.best_move, prev_mv, &self.history_table, ply);
         } else {
-            self.board.sort(&mut mvs, Move::null(), &self.history_table, ply);
+            self.board.sort(&mut mvs, Move::null(), prev_mv, &self.history_table, ply);
         }
 
         // Main search
@@ -350,6 +358,7 @@ impl<'a> Searcher<'a> {
             }
             
             self.board.make_move(&mv);
+            self.prev_mv = mv;
 
             let eval = -self.qsearch(-beta, -alpha, ply + 1);
 
