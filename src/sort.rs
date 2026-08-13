@@ -17,7 +17,8 @@ impl Board {
         let posq = self.piece_on_sq_maybe(mv.to.trailing_zeros() as usize) as i32;
 
         if posq != 0 {
-            return posq * 10000000 - mv.piece_type as i32;
+            return posq * 10000000 - mv.piece_type as i32
+                + hist.probe_tactical(mv, posq as usize - 1);
         }
 
         if hist.get_killer(ply as i32).clone() == mv {
@@ -42,7 +43,8 @@ impl Board {
 
         if posq != 0 {
             return posq * 10000000 - mv.piece_type as i32
-                - if !self.see_threshold(mv, 0) { 1000000000 } else {0};
+                - if !self.see_threshold(mv, 0) { 1000000000 } else {0}
+                + hist.probe_tactical(mv, posq as usize - 1);
         }
 
         if hist.get_killer(ply as i32).clone() == mv {

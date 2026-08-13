@@ -111,6 +111,7 @@ pub struct HistoryTable {
     data: [[[i32; 64]; 64]; 12],
     killers: [Move; 100],
 
+    capthist: Box<[[[i32; 64]; 64]; 12]>,
     cont_1ply: Box<[[[[i32; 64]; 12]; 64]; 12]>,
 }
 
@@ -118,6 +119,10 @@ impl HistoryTable {
     pub fn probe(&self, pmv: Move, mv: Move) -> i32 {
         self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize]
         + if pmv != Move::null() { self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 }
+    }
+
+    pub fn probe_tactical(&self, mv: Move, pt: usize) -> i32 {
+        self.capthist[pt][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize]
     }
 
     pub fn apply_delta(&mut self, pmv: Move, mv: Move, delta: i32) {
@@ -132,6 +137,13 @@ impl HistoryTable {
         }
     }
 
+    pub fn apply_delta_tactical(&mut self, mv: Move, pt: usize, delta: i32) {
+        let deltac = delta.clamp(-512, 512);
+
+        self.capthist[pt][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] +=
+            deltac - self.capthist[pt][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] * deltac.abs() / 512;
+    }
+
     pub fn add_killer(&mut self, mv: Move, ply: i32) {
         self.killers[ply.clamp(0, self.killers.len() as i32 - 1) as usize] = mv;
     }
@@ -143,6 +155,6 @@ impl HistoryTable {
 
 impl Default for HistoryTable {
     fn default() -> Self {
-        Self { data: [[[0; 64]; 64]; 12], killers: [Move::null(); 100], cont_1ply: unsafe { Box::<[[[[i32; 64]; 12]; 64]; 12]>::new_zeroed().assume_init() } }
+        Self { data: [[[0; 64]; 64]; 12], killers: [Move::null(); 100], cont_1ply: unsafe { Box::<_>::new_zeroed().assume_init() }, capthist: unsafe { Box::<_>::new_zeroed().assume_init() } }
     }
 }

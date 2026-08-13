@@ -249,6 +249,7 @@ impl<'a> Searcher<'a> {
                     mvtype = Fail::FailHigh;
                     
                     if !is_capture {
+                        self.history_table.add_killer(mv, ply as i32);
                         self.history_table.apply_delta(prev_mv, mv, depth * depth);
 
                         for j in 0..i {
@@ -257,12 +258,21 @@ impl<'a> Searcher<'a> {
 
                             if !is_capture_2 {
                                 self.history_table.apply_delta(prev_mv, mv2, - depth * depth);
+                            } else {
+                                self.history_table.apply_delta_tactical(mv2, self.board.piece_on_sq(mv2.to.trailing_zeros() as usize), - depth * depth);
                             }
                         }
-                    }
+                    } else {
+                        self.history_table.apply_delta_tactical(mv, self.board.piece_on_sq(mv.to.trailing_zeros() as usize), depth * depth);
+                    
+                        for j in 0..i {
+                            let mv2 = mvs.moves[j];
+                            let is_capture_2 = mv2.to & (self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces)) != 0;
 
-                    if !is_capture {
-                        self.history_table.add_killer(mv, ply as i32);
+                            if is_capture_2 {
+                                self.history_table.apply_delta_tactical(mv2, self.board.piece_on_sq(mv2.to.trailing_zeros() as usize), - depth * depth);
+                            }
+                        }
                     }
 
                     break;
