@@ -462,7 +462,7 @@ impl<'a> Searcher<'a> {
         let mut depth = 0;
 
         // Go deeper and deeper until either mate is found or time is up
-        while timer.elapsed().as_millis() < self.search_ms / 2 && self.search_best_eval < 20000 {
+        while timer.elapsed().as_millis() < self.search_ms / 13 && self.search_best_eval < 20000 {
             if depth == 100 {break}
 
             depth += 1;
