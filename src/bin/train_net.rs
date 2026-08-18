@@ -2,7 +2,7 @@
 
 use bullet::{LocalSettings, TrainingSchedule, TrainingSteps, game::inputs::Chess768, lr, nn::optimiser::AdamW, trainer::save::SavedFormat, value::{ValueTrainerBuilder, loader}, wdl};
 
-const HIDDEN: usize = 256;
+const HIDDEN: usize = 512;
 const SCALE: i32 = 400;
 const QA: i16 = 255;
 const QB: i16 = 64;
@@ -32,13 +32,13 @@ pub fn main() {
         });
 
     let schedule = TrainingSchedule {
-        net_id: "simple_256".to_string(),
+        net_id: "witch_512".to_string(),
         eval_scale: SCALE as f32,
         steps: TrainingSteps {
             batch_size: 16_384,
             batches_per_superbatch: 6104,
             start_superbatch: 1,
-            end_superbatch: 40,
+            end_superbatch: 400,
         },
         wdl_scheduler: wdl::ConstantWDL { value: 0.75 },
         lr_scheduler: lr::StepLR { start: 0.001, gamma: 0.1, step: 18 },
@@ -50,13 +50,15 @@ pub fn main() {
     let data_loader = {
         use loader::viribinpack::{Filter, ViriBinpackLoader, ViriFilter};
 
-        let file_path = r"train6.viri";
+        let file_path = r"train7.viri";
         let buffer_size_mb = 1024;
         let threads = 16;
 
         // The `viriformat` crate exposes a useful `Filter` of its own, but you can also
         // use a custom function like for SF binpacks with `ViriFilter::custom(function)`
-        let filter = ViriFilter::Builtin(Filter::default());
+        let mut internal_filter = Filter::default();
+        internal_filter.max_eval = 25000;
+        let filter = ViriFilter::Builtin(internal_filter);
 
         ViriBinpackLoader::new(file_path, buffer_size_mb, threads, filter)
     };

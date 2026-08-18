@@ -88,13 +88,13 @@ impl Board {
     }
 }
 
-const HIDDEN: usize = 256;
+const HIDDEN: usize = 512;
 const SCALE: i32 = 400;
 const QA: i16 = 255;
 const QB: i16 = 64;
 
 static NNUE: Network =
-    unsafe { std::mem::transmute(*include_bytes!(r"net_witch_256.bin")) };
+    unsafe { std::mem::transmute(*include_bytes!(r"net_witch_512.bin")) };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(C)]

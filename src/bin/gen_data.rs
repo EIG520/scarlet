@@ -29,7 +29,7 @@ async fn main() {
         });
     }
 
-    let mut file = BufWriter::new(OpenOptions::new().create(true).append(true).open("train6.viri").expect("couldn't open file"));
+    let mut file = BufWriter::new(OpenOptions::new().create(true).append(true).open("train7.viri").expect("couldn't open file"));
 
     let mut num_games = 0;
     let mut num_poses = 0;
@@ -38,9 +38,11 @@ async fn main() {
         if let Some(game) = receiver.recv().await {
             let _ = game.serialise_into(&mut file);
             num_games += 1;
-            num_poses += game.moves.len();
+            num_poses += game.moves.len() + 1;
 
-            let _ = file.flush();
+            if num_games % 128 == 0 {
+                let _ = file.flush();
+            }
 
             if num_games % 1000 == 0 {
                 println!("{num_poses} positions ({num_games} games)");
@@ -100,7 +102,7 @@ impl DataGenner {
     pub fn play_scarlet_move(&mut self, softnodes: u128) {
         let mut tt = TranspositionTable::new(softnodes.min(1000000) as usize);
         let mut searcher = Searcher::new(&mut self.scarboard, &mut tt, StoredOptions { use_tt: true });
-        searcher.set_search_ms(50);
+        searcher.set_search_ms(10);
 
         let timer = Instant::now();
         let mut depth = 0;
