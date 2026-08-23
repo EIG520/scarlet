@@ -57,6 +57,7 @@ impl Board {
     }
 }
 
+#[derive(Clone)]
 pub struct SearchStackEntry {
     pub mv: Move,
 }
@@ -96,7 +97,7 @@ impl<'a> Searcher<'a> {
 
     pub fn search(&mut self, mut depth: i32, mut alpha: i32, beta: i32, ply: u32, timer:Instant) -> i32 {
         if depth <= 0 { return self.qsearch(alpha, beta, ply) }
-        
+
         self.nodes += 1;
 
         let root: bool = ply == 0;
@@ -215,7 +216,7 @@ impl<'a> Searcher<'a> {
             if i > ireq && depth >= 2 && (!is_capture && !is_qpromo) {
                 let reduction = (
                     1.0 + (depth as f32).ln() * (i as f32).ln() / 2.0
-                    - self.history_table.probe(&self.search_stack, mv) as f32 / 200.0
+                    - self.history_table.probe(&self.search_stack[..self.search_stack.len()-1], mv) as f32 / 200.0
                 ).floor() as i32;
 
                 let reduced = (newdepth - reduction).clamp(0, depth - 1);

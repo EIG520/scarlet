@@ -118,14 +118,13 @@ pub struct HistoryTable {
 }
 
 impl HistoryTable {
-    pub fn probe(&self, ss: &Vec<SearchStackEntry>, mv: Move) -> i32 {
+    pub fn probe(&self, ss: &[SearchStackEntry], mv: Move) -> i32 {
         let mut ssrev = ss.iter().rev();
         let pmv = if let Some(m) = ssrev.next() { m.mv } else { Move::null() };
         // let ppmv = if let Some(m) = ssrev.next() { m.mv } else { Move::null() };
 
         self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize]
-        +
-        if pmv != Move::null() { self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 }
+        + if pmv != Move::null() { self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 }
         // + if ppmv != Move::null() { self.cont_2ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 }
     }
 
@@ -133,7 +132,7 @@ impl HistoryTable {
         self.capthist[pt][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize]
     }
 
-    pub fn apply_delta(&mut self, ss: &Vec<SearchStackEntry>, mv: Move, delta: i32) {
+    pub fn apply_delta(&mut self, ss: &[SearchStackEntry], mv: Move, delta: i32) {
         let deltac = delta.clamp(-512, 512);
 
         let mut ssrev = ss.iter().rev();
@@ -143,14 +142,17 @@ impl HistoryTable {
         self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] +=
             deltac - self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] * deltac.abs() / 512;
     
+        let contsum = if pmv != Move::null() { self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 };
+            // + if ppmv != Move::null() { self.cont_2ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 };
+
         if pmv != Move::null() {
             self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] +=
-                    deltac - self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] * deltac.abs() / 512;
+                    deltac - contsum * deltac.abs() / 512;
         }
 
         // if ppmv != Move::null() {
         //     self.cont_2ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] +=
-        //             deltac - self.cont_2ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] * deltac.abs() / 512;
+        //             deltac - contsum * deltac.abs() / 512;
         // }
     }
 
