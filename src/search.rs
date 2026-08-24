@@ -161,9 +161,9 @@ impl<'a> Searcher<'a> {
         self.board.gen_legal_moves(&mut mvs, false);
 
         if let Some(entry) = tt_entry {
-            self.board.sort_see(&mut mvs, entry.best_move, &self.search_stack, &self.history_table, ply);
+            self.board.sort_see(&mut mvs, entry.best_move, &self.search_stack[..ply as usize], &self.history_table, ply);
         } else {
-            self.board.sort_see(&mut mvs, Move::null(), &self.search_stack, &self.history_table, ply);
+            self.board.sort_see(&mut mvs, Move::null(), &self.search_stack[..ply as usize], &self.history_table, ply);
         }
 
         // Main Search
@@ -216,7 +216,7 @@ impl<'a> Searcher<'a> {
             if i > ireq && depth >= 2 && (!is_capture && !is_qpromo) {
                 let reduction = (
                     1.0 + (depth as f32).ln() * (i as f32).ln() / 2.0
-                    - self.history_table.probe(&self.search_stack[..self.search_stack.len()-1], mv) as f32 / 200.0
+                    - self.history_table.probe(&self.search_stack[..ply as usize], mv) as f32 / 200.0
                 ).floor() as i32;
 
                 let reduced = (newdepth - reduction).clamp(0, depth - 1);
@@ -256,14 +256,14 @@ impl<'a> Searcher<'a> {
                     
                     if !is_capture {
                         self.history_table.add_killer(mv, ply as i32);
-                        self.history_table.apply_delta(&self.search_stack, mv, depth * depth);
+                        self.history_table.apply_delta(&self.search_stack[..ply as usize], mv, depth * depth);
 
                         for j in 0..i {
                             let mv2 = mvs.moves[j];
                             let is_capture_2 = mv2.to & (self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces)) != 0;
 
                             if !is_capture_2 {
-                                self.history_table.apply_delta(&self.search_stack, mv2, - depth * depth);
+                                self.history_table.apply_delta(&self.search_stack[..ply as usize], mv2, - depth * depth);
                             } else {
                                 self.history_table.apply_delta_tactical(mv2, self.board.piece_on_sq(mv2.to.trailing_zeros() as usize), - depth * depth);
                             }
@@ -353,9 +353,9 @@ impl<'a> Searcher<'a> {
         let mut mvs = MoveList::default();
         self.board.gen_legal_moves(&mut mvs, true);
         if let Some(entry) = tt_entry {
-            self.board.sort(&mut mvs, entry.best_move, &self.search_stack, &self.history_table, ply);
+            self.board.sort(&mut mvs, entry.best_move, &self.search_stack[..ply as usize], &self.history_table, ply);
         } else {
-            self.board.sort(&mut mvs, Move::null(), &self.search_stack, &self.history_table, ply);
+            self.board.sort(&mut mvs, Move::null(), &self.search_stack[..ply as usize], &self.history_table, ply);
         }
 
         // Main search
