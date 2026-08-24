@@ -118,9 +118,8 @@ pub struct HistoryTable {
 }
 
 impl HistoryTable {
-    pub fn probe(&self, ss: &[SearchStackEntry], mv: Move) -> i32 {
-        let mut ssrev = ss.iter().rev();
-        let pmv = if let Some(m) = ssrev.next() { m.mv } else { Move::null() };
+    pub fn probe(&self, ss: &[SearchStackEntry], mv: Move, ply: usize) -> i32 {
+        let pmv = if let Some(m) = ss.get(ply - 1) { m.mv } else { Move::null() };
         // let ppmv = if let Some(m) = ssrev.next() { m.mv } else { Move::null() };
 
         self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize]
@@ -132,11 +131,10 @@ impl HistoryTable {
         self.capthist[pt][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize]
     }
 
-    pub fn apply_delta(&mut self, ss: &[SearchStackEntry], mv: Move, delta: i32) {
+    pub fn apply_delta(&mut self, ss: &[SearchStackEntry], mv: Move, delta: i32, ply: usize) {
         let deltac = delta.clamp(-512, 512);
 
-        let mut ssrev = ss.iter().rev();
-        let pmv = if let Some(m) = ssrev.next() { m.mv } else { Move::null() };
+        let pmv = if let Some(m) = ss.get(ply - 1) { m.mv } else { Move::null() };
         // let ppmv = if let Some(m) = ssrev.next() { m.mv } else { Move::null() };
 
         self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] +=
