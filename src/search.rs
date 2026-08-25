@@ -1,7 +1,6 @@
 pub use crate::board::*;
 pub use crate::transposition_table::*;
 pub use crate::uci::*;
-use std::char::MAX;
 use std::time::Instant;
 
 const MAX_PLY: usize = 128;
