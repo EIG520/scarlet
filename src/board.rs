@@ -70,15 +70,15 @@ pub enum Flag {
 }
 
 pub struct MoveList {
-    pub moves: SmallVec<[Move; 32]>,
+    pub moves: SmallVec<[(Move, i32); 32]>,
     pub pos: usize
 }
 impl MoveList {
-    pub fn new(moves: SmallVec<[Move; 32]>, len: usize) -> Self {
+    pub fn new(moves: SmallVec<[(Move, i32); 32]>, len: usize) -> Self {
         Self {moves, pos: len}
     }
     pub fn push(&mut self, mv: Move) {
-        self.moves.push(mv);
+        self.moves.push((mv, 0));
         self.pos += 1;
     }
     pub fn clear(&mut self) {

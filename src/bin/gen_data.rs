@@ -85,7 +85,7 @@ impl DataGenner {
             let mut mvs = MoveList::default();
             self.scarboard.gen_legal_moves(&mut mvs, false);
 
-            let mv = mvs.moves[random_range(0..mvs.pos)];
+            let mv = mvs.moves[random_range(0..mvs.pos)].0;
 
             // println!("{}", move_to_chess(mv));
     

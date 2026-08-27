@@ -17,7 +17,7 @@ impl Board {
         let mut count: u64 = 0;
 
         for i in 0..moves.pos {
-            let mv = moves.moves[i];
+            let mv = moves.moves[i].0;
             
             self.make_move(&mv);
 
@@ -47,7 +47,7 @@ impl Board {
         let mut count: u64 = 0;
 
         for i in 0..moves.pos {
-            let mv = moves.moves[i];
+            let mv = moves.moves[i].0;
             
             self.make_move(&mv);
             
@@ -165,9 +165,9 @@ impl<'a> Searcher<'a> {
         self.board.gen_legal_moves(&mut mvs, false);
 
         if let Some(entry) = tt_entry {
-            self.board.sort_see(&mut mvs, entry.best_move, &self.search_stack, &self.history_table, ply);
+            self.board.score_moves_see(&mut mvs, entry.best_move, &self.search_stack, &self.history_table, ply);
         } else {
-            self.board.sort_see(&mut mvs, Move::null(), &self.search_stack, &self.history_table, ply);
+            self.board.score_moves_see(&mut mvs, Move::null(), &self.search_stack, &self.history_table, ply);
         }
 
         // Main Search
@@ -181,7 +181,9 @@ impl<'a> Searcher<'a> {
                 return 30000;
             }
 
-            let mv = mvs.moves[i];
+            self.board.find_best_nth(&mut mvs, i);
+
+            let (mv, _score) = mvs.moves[i];
 
             let is_capture = mv.to & (self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces)) != 0;
             let is_qpromo = mv.flag == Flag::QueenPromotion;
@@ -262,7 +264,7 @@ impl<'a> Searcher<'a> {
                         self.history_table.apply_delta(&self.search_stack, mv, depth * depth, ply);
 
                         for j in 0..i {
-                            let mv2 = mvs.moves[j];
+                            let mv2 = mvs.moves[j].0;
                             let is_capture_2 = mv2.to & (self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces)) != 0;
 
                             if !is_capture_2 {
@@ -275,7 +277,7 @@ impl<'a> Searcher<'a> {
                         self.history_table.apply_delta_tactical(mv, self.board.piece_on_sq(mv.to.trailing_zeros() as usize), depth * depth);
                     
                         for j in 0..i {
-                            let mv2 = mvs.moves[j];
+                            let mv2 = mvs.moves[j].0;
                             let is_capture_2 = mv2.to & (self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces)) != 0;
 
                             if is_capture_2 {
@@ -356,16 +358,18 @@ impl<'a> Searcher<'a> {
         let mut mvs = MoveList::default();
         self.board.gen_legal_moves(&mut mvs, true);
         if let Some(entry) = tt_entry {
-            self.board.sort(&mut mvs, entry.best_move, &self.search_stack, &self.history_table, ply);
+            self.board.score_moves(&mut mvs, entry.best_move, &self.search_stack, &self.history_table, ply);
         } else {
-            self.board.sort(&mut mvs, Move::null(), &self.search_stack, &self.history_table, ply);
+            self.board.score_moves(&mut mvs, Move::null(), &self.search_stack, &self.history_table, ply);
         }
 
         // Main search
         let mut best = stat;
 
         for i in 0..mvs.pos {
-            let mv = mvs.moves[i];
+            self.board.find_best_nth(&mut mvs, i);
+
+            let (mv, _score) = mvs.moves[i];
 
             if i > 2 {
                 break;
