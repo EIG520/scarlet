@@ -1,5 +1,3 @@
-pub use crate::board::*;
-pub use crate::transposition_table::*;
 pub use crate::uci::*;
 use std::time::Instant;
 
