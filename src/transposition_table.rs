@@ -127,6 +127,12 @@ impl HistoryTable {
         // + if ppmv != Move::null() { self.cont_2ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 }
     }
 
+    pub fn probe_conthist(&self, ss: &[SearchStackEntry], mv: Move, ply: usize) -> i32 {
+        let pmv = if let Some(m) = ss.get(ply - 1) { m.mv } else { Move::null() };
+
+        if pmv != Move::null() { self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 }
+    }
+
     pub fn probe_tactical(&self, mv: Move, pt: usize) -> i32 {
         self.capthist[pt][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize]
     }
