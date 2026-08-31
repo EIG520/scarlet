@@ -41,7 +41,8 @@ impl Board {
         }
     }
     pub fn update_eval_promotion(&mut self, promotion_type: PieceType, from: u64, to: u64) {
-        let offset_promo = 384 * (promotion_type as usize & 1) + (promotion_type as usize >> 1) * 64;
+        let offset_promo =
+            384 * (promotion_type as usize & 1) + (promotion_type as usize >> 1) * 64;
         let offset_pawn = 384 * (promotion_type as usize & 1);
         let acc = self.get_waccum_mut();
         let weightsf = NNUE.feature_weights[offset_pawn + (from.trailing_zeros() ^ 7) as usize];
@@ -52,7 +53,8 @@ impl Board {
             acc.vals[i] += weightst.vals[i];
         }
 
-        let offset_promo = 384 * (!(promotion_type as usize) & 1) + (promotion_type as usize >> 1) * 64;
+        let offset_promo =
+            384 * (!(promotion_type as usize) & 1) + (promotion_type as usize >> 1) * 64;
         let offset_pawn = 384 * (!(promotion_type as usize) & 1);
         let acc = self.get_baccum_mut();
         let weightsf = NNUE.feature_weights[offset_pawn + (from.trailing_zeros() ^ 63) as usize];
@@ -62,7 +64,6 @@ impl Board {
             acc.vals[i] -= weightsf.vals[i];
             acc.vals[i] += weightst.vals[i];
         }
-
 
         // self.set_phase(self.phase() + promotion_type as i32 / 2);
         // match self.color() {
@@ -79,8 +80,6 @@ impl Board {
         //         // println!("{}", EVAL_TABLES[PieceType::BlackPawn as usize - 1][from.trailing_zeros() as usize ^ 7]);
         //         // println!("{}", from);
 
-
-
         //         self.set_mg_eval(self.mg_eval() - EVAL_TABLES[promotion_type as usize - 1][to.trailing_zeros() as usize ^ 7] - MG_PV[promotion_type as usize / 2]);
         //         self.set_eg_eval(self.eg_eval() - EVAL_TABLES[promotion_type as usize][to.trailing_zeros() as usize ^ 7] - EG_PV[promotion_type as usize / 2]);
         //     }
@@ -93,8 +92,7 @@ const SCALE: i32 = 400;
 const QA: i16 = 255;
 const QB: i16 = 64;
 
-static NNUE: Network =
-    unsafe { std::mem::transmute(*include_bytes!(r"net_witch_512_2.bin")) };
+static NNUE: Network = unsafe { std::mem::transmute(*include_bytes!(r"net_witch_512_2.bin")) };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(C)]
@@ -123,9 +121,23 @@ fn screlu(x: i16) -> i32 {
 
 impl Board {
     pub fn populate_accumulators(&mut self) {
-        let wpieces = [self.get_bitboard(PieceType::WhitePawn), self.get_bitboard(PieceType::WhiteKnight), self.get_bitboard(PieceType::WhiteBishop), self.get_bitboard(PieceType::WhiteRook), self.get_bitboard(PieceType::WhiteQueen), self.get_bitboard(PieceType::WhiteKing)];
-        let bpieces = [self.get_bitboard(PieceType::BlackPawn), self.get_bitboard(PieceType::BlackKnight), self.get_bitboard(PieceType::BlackBishop), self.get_bitboard(PieceType::BlackRook), self.get_bitboard(PieceType::BlackQueen), self.get_bitboard(PieceType::BlackKing)];
-        
+        let wpieces = [
+            self.get_bitboard(PieceType::WhitePawn),
+            self.get_bitboard(PieceType::WhiteKnight),
+            self.get_bitboard(PieceType::WhiteBishop),
+            self.get_bitboard(PieceType::WhiteRook),
+            self.get_bitboard(PieceType::WhiteQueen),
+            self.get_bitboard(PieceType::WhiteKing),
+        ];
+        let bpieces = [
+            self.get_bitboard(PieceType::BlackPawn),
+            self.get_bitboard(PieceType::BlackKnight),
+            self.get_bitboard(PieceType::BlackBishop),
+            self.get_bitboard(PieceType::BlackRook),
+            self.get_bitboard(PieceType::BlackQueen),
+            self.get_bitboard(PieceType::BlackKing),
+        ];
+
         // Do white accumulator
         let mut acc = [0; HIDDEN];
         for i in 0..6 {
@@ -187,12 +199,19 @@ impl Board {
         }
 
         self.set_baccum(Accumulator { vals: acc });
-
     }
 
     pub fn gen_eval(&mut self) -> i32 {
-        let stm_accum = if self.color() == Color::White { self.get_waccum() } else { self.get_baccum() };
-        let ntm_accum = if self.color() == Color::White { self.get_baccum() } else { self.get_waccum() };
+        let stm_accum = if self.color() == Color::White {
+            self.get_waccum()
+        } else {
+            self.get_baccum()
+        };
+        let ntm_accum = if self.color() == Color::White {
+            self.get_baccum()
+        } else {
+            self.get_waccum()
+        };
 
         let mut output = 0;
 
@@ -213,5 +232,4 @@ impl Board {
 
         output
     }
-
 }

@@ -1,14 +1,13 @@
-
 use std::error::Error;
 use std::str::SplitWhitespace;
 
 pub use crate::board::*;
+pub use crate::search::*;
 pub use crate::transposition_table::*;
 pub use crate::utils::*;
-pub use crate::search::*;
 
-use strum_macros::*;
 use strum::*;
+use strum_macros::*;
 
 use std::fs::File;
 use std::io::{self, BufRead};
@@ -32,33 +31,36 @@ impl UciHandler {
             transposition_table: TranspositionTable::new(0),
             options: StoredOptions { use_tt: true },
         };
-        se.transposition_table.resize(16000000 / std::mem::size_of::<Transposition>());
+        se.transposition_table
+            .resize(16000000 / std::mem::size_of::<Transposition>());
         se
     }
 
     pub fn uci(&mut self) {
-
-
-
         let mut line: String;
 
         loop {
             line = String::new();
             let _b = std::io::stdin().read_line(&mut line).unwrap();
-    
+
             match self.handle_once(&mut line.split_whitespace()) {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(_) => break,
             }
         }
     }
 
     pub fn handle_once(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
-
         match command.next() {
             Some("ucinewgame") => Ok(()),
-            Some("isready") => {println!("readyok"); Ok(())},
-            Some("uci") => {self.handle_uci(); Ok(())},
+            Some("isready") => {
+                println!("readyok");
+                Ok(())
+            }
+            Some("uci") => {
+                self.handle_uci();
+                Ok(())
+            }
 
             Some("quit") => Err(()),
 
@@ -66,10 +68,30 @@ impl UciHandler {
             Some("position") => self.handle_position(command),
             Some("setoption") => self.handle_option(command),
 
-            Some("d") => {print_bb(self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces));println!("{}", self.board.zobrist_hash());self.board.print_eval_info();self.board.populate_accumulators();self.board.print_eval_info();Ok(())}
-            Some("see") => {println!("{}", self.board.see_threshold(self.board.chess_to_move(command.next().unwrap().to_string()), 0));Ok(())}
-            Some("shorttest") => {self.handle_test_shortform(command)}
-            _ => Ok(())
+            Some("d") => {
+                print_bb(
+                    self.board.get_bitboard(PieceType::WhitePieces)
+                        | self.board.get_bitboard(PieceType::BlackPieces),
+                );
+                println!("{}", self.board.zobrist_hash());
+                self.board.print_eval_info();
+                self.board.populate_accumulators();
+                self.board.print_eval_info();
+                Ok(())
+            }
+            Some("see") => {
+                println!(
+                    "{}",
+                    self.board.see_threshold(
+                        self.board
+                            .chess_to_move(command.next().unwrap().to_string()),
+                        0
+                    )
+                );
+                Ok(())
+            }
+            Some("shorttest") => self.handle_test_shortform(command),
+            _ => Ok(()),
         }
     }
 
@@ -80,14 +102,21 @@ impl UciHandler {
             // Set tt size in bytes
             Some(x) if x.to_lowercase() == "hash" => {
                 command.next();
-                
+
                 match command.next() {
                     Some(x) if x.parse::<i32>().is_ok() => {
-                        self.transposition_table.resize(1000000 * x.parse::<usize>().unwrap() / std::mem::size_of::<Transposition>());
-                        println!("info string Elements in new TT: {}", 1000000 * x.parse::<usize>().unwrap() / std::mem::size_of::<Transposition>());
+                        self.transposition_table.resize(
+                            1000000 * x.parse::<usize>().unwrap()
+                                / std::mem::size_of::<Transposition>(),
+                        );
+                        println!(
+                            "info string Elements in new TT: {}",
+                            1000000 * x.parse::<usize>().unwrap()
+                                / std::mem::size_of::<Transposition>()
+                        );
                         Ok(())
                     }
-                    _ => {Ok(())}
+                    _ => Ok(()),
                 }
             }
             Some(x) if x.to_lowercase() == "usett" => {
@@ -102,10 +131,10 @@ impl UciHandler {
                         self.options.use_tt = false;
                         Ok(())
                     }
-                    _ => {Ok(())}
+                    _ => Ok(()),
                 }
             }
-            _ => {Ok(())}
+            _ => Ok(()),
         }
     }
 
@@ -116,10 +145,19 @@ impl UciHandler {
         println!();
 
         for option in EngineOption::iter() {
-            print!("option name {} type {} default {}", option.get_str("Name").unwrap(), option.get_str("Type").unwrap(), option.get_str("Default").unwrap());
+            print!(
+                "option name {} type {} default {}",
+                option.get_str("Name").unwrap(),
+                option.get_str("Type").unwrap(),
+                option.get_str("Default").unwrap()
+            );
 
             if option.get_str("Type").unwrap() == "spin" {
-                print!(" min {} max {}", option.get_str("Min").unwrap(), option.get_str("Max").unwrap());
+                print!(
+                    " min {} max {}",
+                    option.get_str("Min").unwrap(),
+                    option.get_str("Max").unwrap()
+                );
             }
             println!();
         }
@@ -128,12 +166,14 @@ impl UciHandler {
     }
 
     pub fn handle_test_shortform(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
-        println!("{}", self.board.move_to_chess(
+        println!(
+            "{}",
+            self.board.move_to_chess(
                 CompactMove::from(
-                    self.board.chess_to_move(
-                        command.next().ok_or(())?.to_owned()
-                    )
-                ).long_form()
+                    self.board
+                        .chess_to_move(command.next().ok_or(())?.to_owned())
+                )
+                .long_form()
             )
         );
         Ok(())
@@ -144,9 +184,17 @@ impl UciHandler {
 
         while next.is_some() {
             match next {
-                Some("perft") => {return self.handle_perft(command)},
-                Some("depth") => {return self.handle_depth(command)},
-                Some(name) if name == match self.board.color() {Color::White => "wtime", Color::Black => "btime"} => {return self.handle_time(command)}
+                Some("perft") => return self.handle_perft(command),
+                Some("depth") => return self.handle_depth(command),
+                Some(name)
+                    if name
+                        == match self.board.color() {
+                            Color::White => "wtime",
+                            Color::Black => "btime",
+                        } =>
+                {
+                    return self.handle_time(command);
+                }
                 _ => {}
             }
 
@@ -155,25 +203,29 @@ impl UciHandler {
 
         Ok(())
     }
-    
+
     pub fn handle_time(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
         match command.next() {
             Some(x) if x.parse::<u128>().is_ok() => {
-                let mut searcher: Searcher = Searcher::new(&mut self.board, &mut self.transposition_table, self.options);
+                let mut searcher: Searcher =
+                    Searcher::new(&mut self.board, &mut self.transposition_table, self.options);
                 searcher.search_for_ms(x.parse::<u128>().unwrap() / 2);
                 Ok(())
-            },
-            _ => {Err(())}
+            }
+            _ => Err(()),
         }
     }
 
     pub fn handle_depth(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
-
         let next = command.next();
         match next {
             Some(a) if a.parse::<i32>().is_ok() => {
-                let mut searcher: Searcher = Searcher::new(&mut self.board, &mut self.transposition_table, self.options);
-                println!("{}",move_to_chess(searcher.search_to_depth(a.parse::<i32>().unwrap())));
+                let mut searcher: Searcher =
+                    Searcher::new(&mut self.board, &mut self.transposition_table, self.options);
+                println!(
+                    "{}",
+                    move_to_chess(searcher.search_to_depth(a.parse::<i32>().unwrap()))
+                );
                 Ok(())
             }
             _ => Err(()),
@@ -184,17 +236,18 @@ impl UciHandler {
         let next = command.next();
 
         match next {
-            Some(depth_str) => {
-                match depth_str.parse::<u64>() {
-                    Ok(_) => {self.board.perft(depth_str.parse::<u64>().unwrap());Ok(())},
-                    Err(_) => {Err(())}
+            Some(depth_str) => match depth_str.parse::<u64>() {
+                Ok(_) => {
+                    self.board.perft(depth_str.parse::<u64>().unwrap());
+                    Ok(())
                 }
+                Err(_) => Err(()),
             },
             _ => Err(()),
         }
     }
 
-    pub fn handle_position(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()>{
+    pub fn handle_position(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
         let next = command.next();
 
         match next {
@@ -203,46 +256,45 @@ impl UciHandler {
             _ => Err(()),
         }
     }
-    pub fn handle_startpos(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()>{
+    pub fn handle_startpos(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
         let mut pos: usize = 0;
-    
+
         // Clear out bitboards
         self.board.clear();
-    
+
         let first = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
-    
+
         // Set the pieces
         for c in first.chars() {
             if c.is_ascii_digit() {
                 pos += c.to_digit(10).unwrap() as usize;
-            }
-            else {
+            } else {
                 match c {
-                    'P' =>  self.board.add_to_square(63 - pos, PieceType::WhitePawn),
-                    'p' =>  self.board.add_to_square(63 - pos, PieceType::BlackPawn),
-                    'N' =>  self.board.add_to_square(63 - pos, PieceType::WhiteKnight),
-                    'n' =>  self.board.add_to_square(63 - pos, PieceType::BlackKnight),
-                    'B' =>  self.board.add_to_square(63 - pos, PieceType::WhiteBishop),
-                    'b' =>  self.board.add_to_square(63 - pos, PieceType::BlackBishop),
-                    'R' =>  self.board.add_to_square(63 - pos, PieceType::WhiteRook),
-                    'r' =>  self.board.add_to_square(63 - pos, PieceType::BlackRook),
-                    'Q' =>  self.board.add_to_square(63 - pos, PieceType::WhiteQueen),
-                    'q' =>  self.board.add_to_square(63 - pos, PieceType::BlackQueen),
-                    'K' =>  self.board.add_to_square(63 - pos, PieceType::WhiteKing),
-                    'k' =>  self.board.add_to_square(63 - pos, PieceType::BlackKing),
-                    // We can ignore /s 
-                    '/' => {pos -= 1}
+                    'P' => self.board.add_to_square(63 - pos, PieceType::WhitePawn),
+                    'p' => self.board.add_to_square(63 - pos, PieceType::BlackPawn),
+                    'N' => self.board.add_to_square(63 - pos, PieceType::WhiteKnight),
+                    'n' => self.board.add_to_square(63 - pos, PieceType::BlackKnight),
+                    'B' => self.board.add_to_square(63 - pos, PieceType::WhiteBishop),
+                    'b' => self.board.add_to_square(63 - pos, PieceType::BlackBishop),
+                    'R' => self.board.add_to_square(63 - pos, PieceType::WhiteRook),
+                    'r' => self.board.add_to_square(63 - pos, PieceType::BlackRook),
+                    'Q' => self.board.add_to_square(63 - pos, PieceType::WhiteQueen),
+                    'q' => self.board.add_to_square(63 - pos, PieceType::BlackQueen),
+                    'K' => self.board.add_to_square(63 - pos, PieceType::WhiteKing),
+                    'k' => self.board.add_to_square(63 - pos, PieceType::BlackKing),
+                    // We can ignore /s
+                    '/' => pos -= 1,
                     // If it's a space, we move on to the next part
-                    ' ' => {break}
-                    _ => {return Err(())}
+                    ' ' => break,
+                    _ => return Err(()),
                 }
                 pos += 1;
             }
         }
-    
+
         // Side to move
         self.board.set_color(Color::White);
-    
+
         // Castling
         let mut crs: u64 = 0;
         for c in "KQkq".chars() {
@@ -251,13 +303,15 @@ impl UciHandler {
                 'Q' => crs += 0b0100,
                 'k' => crs += 0b0010,
                 'q' => crs += 0b0001,
-                '-' => {},
-                _ => {return Err(());}
+                '-' => {}
+                _ => {
+                    return Err(());
+                }
             }
         }
-        
+
         self.board.set_bitboard(PieceType::CastleRights, crs);
-    
+
         // En passant target square
         let ep = chess_to_square("-".to_string());
         // If chest_to_square returns something > 64, then it is invalid
@@ -276,58 +330,56 @@ impl UciHandler {
             Some("moves") => {
                 let mv = command.next();
                 self.handle_moves(command, mv)
-            },
-            _ => {
-                Ok(())
             }
+            _ => Ok(()),
         }
-
     }
 
-    pub fn handle_fen(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()>{
+    pub fn handle_fen(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
         let mut pos: usize = 0;
-    
+
         // Clear out bitboards
         self.board.clear();
-    
+
         let first = command.next().unwrap();
-    
+
         // Set the pieces
         for c in first.chars() {
             if c.is_ascii_digit() {
                 pos += c.to_digit(10).unwrap() as usize;
-            }
-            else {
+            } else {
                 match c {
-                    'P' =>  self.board.add_to_square(63 - pos, PieceType::WhitePawn),
-                    'p' =>  self.board.add_to_square(63 - pos, PieceType::BlackPawn),
-                    'N' =>  self.board.add_to_square(63 - pos, PieceType::WhiteKnight),
-                    'n' =>  self.board.add_to_square(63 - pos, PieceType::BlackKnight),
-                    'B' =>  self.board.add_to_square(63 - pos, PieceType::WhiteBishop),
-                    'b' =>  self.board.add_to_square(63 - pos, PieceType::BlackBishop),
-                    'R' =>  self.board.add_to_square(63 - pos, PieceType::WhiteRook),
-                    'r' =>  self.board.add_to_square(63 - pos, PieceType::BlackRook),
-                    'Q' =>  self.board.add_to_square(63 - pos, PieceType::WhiteQueen),
-                    'q' =>  self.board.add_to_square(63 - pos, PieceType::BlackQueen),
-                    'K' =>  self.board.add_to_square(63 - pos, PieceType::WhiteKing),
-                    'k' =>  self.board.add_to_square(63 - pos, PieceType::BlackKing),
-                    // We can ignore /s 
-                    '/' => {pos -= 1}
+                    'P' => self.board.add_to_square(63 - pos, PieceType::WhitePawn),
+                    'p' => self.board.add_to_square(63 - pos, PieceType::BlackPawn),
+                    'N' => self.board.add_to_square(63 - pos, PieceType::WhiteKnight),
+                    'n' => self.board.add_to_square(63 - pos, PieceType::BlackKnight),
+                    'B' => self.board.add_to_square(63 - pos, PieceType::WhiteBishop),
+                    'b' => self.board.add_to_square(63 - pos, PieceType::BlackBishop),
+                    'R' => self.board.add_to_square(63 - pos, PieceType::WhiteRook),
+                    'r' => self.board.add_to_square(63 - pos, PieceType::BlackRook),
+                    'Q' => self.board.add_to_square(63 - pos, PieceType::WhiteQueen),
+                    'q' => self.board.add_to_square(63 - pos, PieceType::BlackQueen),
+                    'K' => self.board.add_to_square(63 - pos, PieceType::WhiteKing),
+                    'k' => self.board.add_to_square(63 - pos, PieceType::BlackKing),
+                    // We can ignore /s
+                    '/' => pos -= 1,
                     // If it's a space, we move on to the next part
-                    ' ' => {break}
-                    _ => {return Err(())}
+                    ' ' => break,
+                    _ => return Err(()),
                 }
                 pos += 1;
             }
         }
-    
+
         // Side to move
         match command.next() {
-            Some("w") => {self.board.set_color(Color::White)},
-            Some("b") => {self.board.set_color(Color::Black)},
-            _ => {return Err(());},
+            Some("w") => self.board.set_color(Color::White),
+            Some("b") => self.board.set_color(Color::Black),
+            _ => {
+                return Err(());
+            }
         }
-    
+
         // Castling
         let mut crs: u64 = 0;
         for c in command.next().unwrap().chars() {
@@ -336,13 +388,15 @@ impl UciHandler {
                 'Q' => crs += 0b0100,
                 'k' => crs += 0b0010,
                 'q' => crs += 0b0001,
-                '-' => {},
-                _ => {return Err(());}
+                '-' => {}
+                _ => {
+                    return Err(());
+                }
             }
         }
-        
+
         self.board.set_bitboard(PieceType::CastleRights, crs);
-    
+
         // En passant target square
         let ep = chess_to_square(command.next().unwrap().to_string());
         // If chest_to_square returns something > 64, then it is invalid
@@ -354,52 +408,68 @@ impl UciHandler {
         }
 
         match (command.next(), command.next()) {
-            (Some("moves"), m) => {self.board.init();self.handle_moves(command, m)},
+            (Some("moves"), m) => {
+                self.board.init();
+                self.handle_moves(command, m)
+            }
             (Some(a), Some(b)) if a.parse::<u64>().is_ok() && b.parse::<u64>().is_ok() => {
                 self.board.set_move_count(b.parse::<u16>().unwrap());
                 command.next();
                 let f = command.next();
                 self.board.init();
                 self.handle_moves(command, f)
-            },
-            (None, None) => {self.board.init();Ok(())},
-            _ => {self.board.init();Err(())}
+            }
+            (None, None) => {
+                self.board.init();
+                Ok(())
+            }
+            _ => {
+                self.board.init();
+                Err(())
+            }
         }
     }
 
-    pub fn handle_moves(&mut self, command: &mut SplitWhitespace<'_>, first_move: Option<&str>) -> Result<(), ()>{
+    pub fn handle_moves(
+        &mut self,
+        command: &mut SplitWhitespace<'_>,
+        first_move: Option<&str>,
+    ) -> Result<(), ()> {
         let mut next: Option<&str> = first_move;
 
         while next.is_some() {
-            self.board.make_move(&self.board.chess_to_move(String::from(next.unwrap())));
+            self.board
+                .make_move(&self.board.chess_to_move(String::from(next.unwrap())));
             next = command.next();
         }
 
         Ok(())
     }
-
-
 }
 
-
-
 // Return -1 if test passed, otherwise return depth it failed at
-pub fn test_movegen(fen: String, node_counts: Vec<i64>) -> Result<i32, ()>{
+pub fn test_movegen(fen: String, node_counts: Vec<i64>) -> Result<i32, ()> {
     let mut uci: UciHandler = UciHandler::new();
 
-    if let Err(()) = uci.handle_once(&mut format!("position fen {}", fen).split_whitespace()) {return Err(())}
+    if let Err(()) = uci.handle_once(&mut format!("position fen {}", fen).split_whitespace()) {
+        return Err(());
+    }
 
-    if let Err(()) = uci.handle_once(&mut format!("position fen {}", fen).split_whitespace()) {return Err(())}
+    if let Err(()) = uci.handle_once(&mut format!("position fen {}", fen).split_whitespace()) {
+        return Err(());
+    }
 
     for i in 0..node_counts.len() as u64 {
-        if node_counts[i as u64 as usize] == -1 {continue;}
+        if node_counts[i as u64 as usize] == -1 {
+            continue;
+        }
 
         let ncs = uci.board.sub_perft(i + 1);
-        if ncs != node_counts[i as usize] as u64{
-            println!("Perft {} failed ({})", i+1, fen);
+        if ncs != node_counts[i as usize] as u64 {
+            println!("Perft {} failed ({})", i + 1, fen);
             return Ok(i as i32 + 1);
         }
-        println!("Perft {} passed ({})", i+1, fen);
+        println!("Perft {} passed ({})", i + 1, fen);
     }
     Ok(-1)
 }
@@ -407,7 +477,9 @@ pub fn test_movegen(fen: String, node_counts: Vec<i64>) -> Result<i32, ()>{
 pub fn test_see(fen: String, mv: String, score: i32) -> Result<i32, ()> {
     let mut uci: UciHandler = UciHandler::new();
 
-    if let Err(()) = uci.handle_once(&mut format!("position fen {}", fen).split_whitespace()) {return Err(())}
+    if let Err(()) = uci.handle_once(&mut format!("position fen {}", fen).split_whitespace()) {
+        return Err(());
+    }
 
     let mv = uci.board.chess_to_move(mv);
 
@@ -424,14 +496,12 @@ pub fn test_see(fen: String, mv: String, score: i32) -> Result<i32, ()> {
     }
 }
 
-pub fn test_movegen_on_suite(suite_filename: &str) -> Result<(), Box::<dyn Error>> {
+pub fn test_movegen_on_suite(suite_filename: &str) -> Result<(), Box<dyn Error>> {
     let file = File::open(suite_filename)?;
 
     for line in io::BufReader::new(file).lines() {
         let ln = line?;
-        let mut info = ln
-            .split(';')
-            .map(|i| i.to_string());
+        let mut info = ln.split(';').map(|i| i.to_string());
 
         let fen = info.next().unwrap();
         let mut node_counts: Vec<i64> = vec![];
@@ -441,7 +511,7 @@ pub fn test_movegen_on_suite(suite_filename: &str) -> Result<(), Box::<dyn Error
 
             let index = option.next().unwrap()[1..].parse::<u64>().unwrap();
 
-            while index != node_counts.len() as u64 + 1{
+            while index != node_counts.len() as u64 + 1 {
                 node_counts.push(-1);
             }
 
@@ -455,22 +525,20 @@ pub fn test_movegen_on_suite(suite_filename: &str) -> Result<(), Box::<dyn Error
         println!("{}", fen);
         println!("{:?}", node_counts);
         match test_movegen(fen, node_counts) {
-            Err(()) => {return Err(Box::<dyn Error>::from("something bad happened"))},
-            Ok(a) if a != -1 => {return Ok(())},
-            _ => {},
+            Err(()) => return Err(Box::<dyn Error>::from("something bad happened")),
+            Ok(a) if a != -1 => return Ok(()),
+            _ => {}
         }
     }
     Ok(())
 }
 
-pub fn test_see_on_suite(suite_filename: &str) -> Result<(), Box::<dyn Error>> {
+pub fn test_see_on_suite(suite_filename: &str) -> Result<(), Box<dyn Error>> {
     let file = File::open(suite_filename)?;
 
     for line in io::BufReader::new(file).lines() {
         let ln = line?;
-        let mut info = ln
-            .split("|")
-            .map(|i| i.to_string());
+        let mut info = ln.split("|").map(|i| i.to_string());
 
         let fen = info.next().unwrap();
         let mv = info.next().unwrap().trim().to_string();
@@ -481,10 +549,14 @@ pub fn test_see_on_suite(suite_filename: &str) -> Result<(), Box::<dyn Error>> {
         println!("score {}", score);
 
         match test_see(fen, mv, score) {
-            Err(()) => {return Err(Box::<dyn Error>::from("something bad happened"));},
-            Ok(a) if a != -1 => {},
-            Ok(-1) => {break;}
-            _ => {},        
+            Err(()) => {
+                return Err(Box::<dyn Error>::from("something bad happened"));
+            }
+            Ok(a) if a != -1 => {}
+            Ok(-1) => {
+                break;
+            }
+            _ => {}
         }
         println!();
     }
@@ -494,9 +566,15 @@ pub fn test_see_on_suite(suite_filename: &str) -> Result<(), Box::<dyn Error>> {
 
 #[derive(Clone, Copy, Debug, strum_macros::EnumProperty, EnumIter)]
 enum EngineOption {
-    #[strum(props(Name = "Hash", Type = "spin", Default="16", Min="0", Max="999999999"))]
+    #[strum(props(
+        Name = "Hash",
+        Type = "spin",
+        Default = "16",
+        Min = "0",
+        Max = "999999999"
+    ))]
     Hash,
-    #[strum(props(Name = "UseTT", Type = "check", Default="true"))]
+    #[strum(props(Name = "UseTT", Type = "check", Default = "true"))]
     UseTT,
 }
 

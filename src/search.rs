@@ -16,7 +16,7 @@ impl Board {
 
         for i in 0..moves.pos {
             let mv = moves.moves[i].0;
-            
+
             self.make_move(&mv);
 
             let subcount = self.sub_perft(depth - 1);
@@ -24,7 +24,7 @@ impl Board {
             self.undo();
 
             count += subcount;
-            
+
             println!("{}: {}", move_to_chess(mv), subcount);
         }
         println!("nodes: {}", count);
@@ -46,9 +46,9 @@ impl Board {
 
         for i in 0..moves.pos {
             let mv = moves.moves[i].0;
-            
+
             self.make_move(&mv);
-            
+
             count += self.sub_perft(depth - 1);
 
             self.undo();
@@ -79,7 +79,11 @@ pub struct Searcher<'a> {
 }
 
 impl<'a> Searcher<'a> {
-    pub fn new(board: &'a mut Board, transposition_table: &'a mut TranspositionTable, options: StoredOptions) -> Self {
+    pub fn new(
+        board: &'a mut Board,
+        transposition_table: &'a mut TranspositionTable,
+        options: StoredOptions,
+    ) -> Self {
         Self {
             board,
             root_best: Move::null(),
@@ -92,12 +96,24 @@ impl<'a> Searcher<'a> {
             history_table: HistoryTable::default(),
             options,
 
-            search_stack: [SearchStackEntry {mv: Move::null(), capt: false}; 128]
+            search_stack: [SearchStackEntry {
+                mv: Move::null(),
+                capt: false,
+            }; 128],
         }
     }
 
-    pub fn search(&mut self, mut depth: i32, mut alpha: i32, beta: i32, ply: usize, timer:Instant) -> i32 {
-        if depth <= 0 { return self.qsearch(alpha, beta, ply) }
+    pub fn search(
+        &mut self,
+        mut depth: i32,
+        mut alpha: i32,
+        beta: i32,
+        ply: usize,
+        timer: Instant,
+    ) -> i32 {
+        if depth <= 0 {
+            return self.qsearch(alpha, beta, ply);
+        }
 
         self.nodes += 1;
 
@@ -106,13 +122,14 @@ impl<'a> Searcher<'a> {
         let pv = alpha != beta - 1;
         let reduce = !pv && !incheck;
 
-        if self.board.upcoming_draw() && !root {return 0;}
+        if self.board.upcoming_draw() && !root {
+            return 0;
+        }
 
         let mut tt_entry: Option<TranspositionInfo> = None;
 
         if self.options.use_tt {
-            tt_entry = self.transposition_table
-                .probe(self.board);
+            tt_entry = self.transposition_table.probe(self.board);
         }
 
         let mut stat = self.board.gen_eval();
@@ -120,12 +137,15 @@ impl<'a> Searcher<'a> {
         if let Some(entry) = tt_entry {
             let score = entry.score;
 
-            if !pv && entry.depth as i32 >= depth && match entry.fail {
-                Fail::NoFail => true,
-                Fail::FailHigh => score >= beta,
-                Fail::FailLow => score <= alpha,
-                Fail::None => false, // not possible
-            } {
+            if !pv
+                && entry.depth as i32 >= depth
+                && match entry.fail {
+                    Fail::NoFail => true,
+                    Fail::FailHigh => score >= beta,
+                    Fail::FailLow => score <= alpha,
+                    Fail::None => false, // not possible
+                }
+            {
                 return score;
             }
 
@@ -135,27 +155,42 @@ impl<'a> Searcher<'a> {
             depth -= 1;
         }
 
-        if ply >= MAX_PLY {return stat;}
+        if ply >= MAX_PLY {
+            return stat;
+        }
 
-        let improving = !incheck 
-            && self.board.hist_len() >= 2 
+        let improving = !incheck
+            && self.board.hist_len() >= 2
             && self.board.state().eval() > self.board.get_nth_prev_boardstate(2).eval();
 
         // Pruning
         if !root && reduce {
             // rfp
-            if stat - 85 * depth + if improving { 85 } else { 0 } >= beta { return stat; }
+            if stat - 85 * depth + if improving { 85 } else { 0 } >= beta {
+                return stat;
+            }
 
             // null move pruning
             if depth > 2 && stat >= beta {
                 self.board.make_null_move();
-                self.search_stack[ply as usize] = SearchStackEntry { mv: Move::null(), capt: false };
+                self.search_stack[ply as usize] = SearchStackEntry {
+                    mv: Move::null(),
+                    capt: false,
+                };
 
-                let eval = -self.search((depth * 100 + beta - stat) / 200 - 1, -beta, 1-beta, ply + 1, timer);
-            
+                let eval = -self.search(
+                    (depth * 100 + beta - stat) / 200 - 1,
+                    -beta,
+                    1 - beta,
+                    ply + 1,
+                    timer,
+                );
+
                 self.board.unmake_null_move();
 
-                if eval >= beta { return eval; }
+                if eval >= beta {
+                    return eval;
+                }
             }
         }
 
@@ -163,9 +198,21 @@ impl<'a> Searcher<'a> {
         self.board.gen_legal_moves(&mut mvs, false);
 
         if let Some(entry) = tt_entry {
-            self.board.score_moves_see(&mut mvs, entry.best_move, &self.search_stack, &self.history_table, ply);
+            self.board.score_moves_see(
+                &mut mvs,
+                entry.best_move,
+                &self.search_stack,
+                &self.history_table,
+                ply,
+            );
         } else {
-            self.board.score_moves_see(&mut mvs, Move::null(), &self.search_stack, &self.history_table, ply);
+            self.board.score_moves_see(
+                &mut mvs,
+                Move::null(),
+                &self.search_stack,
+                &self.history_table,
+                ply,
+            );
         }
 
         // Main Search
@@ -174,8 +221,10 @@ impl<'a> Searcher<'a> {
         let mut mvtype = Fail::FailLow;
 
         for i in 0..mvs.pos {
-
-            if self.nodes % 2048 == 0 && self.search_ms != 0 && timer.elapsed().as_millis() >= self.search_ms {
+            if self.nodes % 2048 == 0
+                && self.search_ms != 0
+                && timer.elapsed().as_millis() >= self.search_ms
+            {
                 return 30000;
             }
 
@@ -183,27 +232,41 @@ impl<'a> Searcher<'a> {
 
             let (mv, _score) = mvs.moves[i];
 
-            let is_capture = mv.to & (self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces)) != 0;
+            let is_capture = mv.to
+                & (self.board.get_bitboard(PieceType::WhitePieces)
+                    | self.board.get_bitboard(PieceType::BlackPieces))
+                != 0;
             let is_qpromo = mv.flag == Flag::QueenPromotion;
 
             // moveloop pruning (thank you amber21!!!)
             if !root && !incheck && best >= -20000 {
-
                 // late move pruning
-                if !pv && !is_capture && !is_qpromo && i as i32 > 5 + depth * depth && alpha.abs() < 2000 && beta < 20000 {
+                if !pv
+                    && !is_capture
+                    && !is_qpromo
+                    && i as i32 > 5 + depth * depth
+                    && alpha.abs() < 2000
+                    && beta < 20000
+                {
                     break;
                 }
 
                 // futility pruning
-                if !is_capture && !is_qpromo && stat + 256 + 128 * depth < alpha && alpha.abs() < 2000 && depth <= 6 {
+                if !is_capture
+                    && !is_qpromo
+                    && stat + 256 + 128 * depth < alpha
+                    && alpha.abs() < 2000
+                    && depth <= 6
+                {
                     break;
                 }
-
-
             }
 
             self.board.make_move(&mv);
-            self.search_stack[ply] = SearchStackEntry { mv, capt: is_capture };
+            self.search_stack[ply] = SearchStackEntry {
+                mv,
+                capt: is_capture,
+            };
 
             let mut ext = 0;
 
@@ -218,26 +281,25 @@ impl<'a> Searcher<'a> {
             let ireq = if pv { 6 } else { 2 };
 
             if i > ireq && depth >= 2 && (!is_capture && !is_qpromo) {
-                let reduction = (
-                    1.0 + (depth as f32).ln() * (i as f32).ln() / 2.0
-                    - self.history_table.probe(&self.search_stack, mv, ply) as f32 / 200.0
-                ).floor() as i32;
+                let reduction = (1.0 + (depth as f32).ln() * (i as f32).ln() / 2.0
+                    - self.history_table.probe(&self.search_stack, mv, ply) as f32 / 200.0)
+                    .floor() as i32;
 
                 let reduced = (newdepth - reduction).clamp(0, depth - 1);
 
-                eval = -self.search(reduced, -alpha-1, -alpha, ply + 1, timer);
+                eval = -self.search(reduced, -alpha - 1, -alpha, ply + 1, timer);
 
                 if eval > alpha && reduced < newdepth {
-                    eval = -self.search(newdepth, -alpha-1, -alpha, ply + 1, timer);
+                    eval = -self.search(newdepth, -alpha - 1, -alpha, ply + 1, timer);
                 }
             } else if !pv || i > 0 {
-                eval = -self.search(newdepth, -alpha-1, -alpha, ply + 1, timer);
+                eval = -self.search(newdepth, -alpha - 1, -alpha, ply + 1, timer);
             }
 
             if pv && (i == 0 || eval > alpha) {
                 eval = -self.search(newdepth, -beta, -alpha, ply + 1, timer);
             }
-            
+
             self.board.undo();
 
             if eval > best {
@@ -256,30 +318,54 @@ impl<'a> Searcher<'a> {
                 }
                 if alpha >= beta {
                     mvtype = Fail::FailHigh;
-                    
+
                     if !is_capture {
                         self.history_table.add_killer(mv, ply as i32);
-                        self.history_table.apply_delta(&self.search_stack, mv, depth * depth, ply);
+                        self.history_table
+                            .apply_delta(&self.search_stack, mv, depth * depth, ply);
 
                         for j in 0..i {
                             let mv2 = mvs.moves[j].0;
-                            let is_capture_2 = mv2.to & (self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces)) != 0;
+                            let is_capture_2 = mv2.to
+                                & (self.board.get_bitboard(PieceType::WhitePieces)
+                                    | self.board.get_bitboard(PieceType::BlackPieces))
+                                != 0;
 
                             if !is_capture_2 {
-                                self.history_table.apply_delta(&self.search_stack, mv2, - depth * depth, ply);
+                                self.history_table.apply_delta(
+                                    &self.search_stack,
+                                    mv2,
+                                    -depth * depth,
+                                    ply,
+                                );
                             } else {
-                                self.history_table.apply_delta_tactical(mv2, self.board.piece_on_sq(mv2.to.trailing_zeros() as usize), - depth * depth);
+                                self.history_table.apply_delta_tactical(
+                                    mv2,
+                                    self.board.piece_on_sq(mv2.to.trailing_zeros() as usize),
+                                    -depth * depth,
+                                );
                             }
                         }
                     } else {
-                        self.history_table.apply_delta_tactical(mv, self.board.piece_on_sq(mv.to.trailing_zeros() as usize), depth * depth);
-                    
+                        self.history_table.apply_delta_tactical(
+                            mv,
+                            self.board.piece_on_sq(mv.to.trailing_zeros() as usize),
+                            depth * depth,
+                        );
+
                         for j in 0..i {
                             let mv2 = mvs.moves[j].0;
-                            let is_capture_2 = mv2.to & (self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces)) != 0;
+                            let is_capture_2 = mv2.to
+                                & (self.board.get_bitboard(PieceType::WhitePieces)
+                                    | self.board.get_bitboard(PieceType::BlackPieces))
+                                != 0;
 
                             if is_capture_2 {
-                                self.history_table.apply_delta_tactical(mv2, self.board.piece_on_sq(mv2.to.trailing_zeros() as usize), - depth * depth);
+                                self.history_table.apply_delta_tactical(
+                                    mv2,
+                                    self.board.piece_on_sq(mv2.to.trailing_zeros() as usize),
+                                    -depth * depth,
+                                );
                             }
                         }
                     }
@@ -297,20 +383,27 @@ impl<'a> Searcher<'a> {
             return 0;
         }
 
-        if self.options.use_tt  {
+        if self.options.use_tt {
             self.transposition_table.add(
-                self.board, depth as i8, best, 
-                    if mvtype != Fail::FailLow || tt_entry.is_none() { best_move }
-                            else { tt_entry.unwrap().best_move }
-                , mvtype
+                self.board,
+                depth as i8,
+                best,
+                if mvtype != Fail::FailLow || tt_entry.is_none() {
+                    best_move
+                } else {
+                    tt_entry.unwrap().best_move
+                },
+                mvtype,
             );
         }
 
-        if root && (timer.elapsed().as_millis() < self.search_ms || self.search_best_eval > self.root_best_eval) {
+        if root
+            && (timer.elapsed().as_millis() < self.search_ms
+                || self.search_best_eval > self.root_best_eval)
+        {
             self.root_best = self.search_best;
             self.root_best_eval = self.search_best_eval;
         }
-
 
         best
     }
@@ -321,13 +414,14 @@ impl<'a> Searcher<'a> {
         // let incheck = self.board.in_check();
         // let pv = alpha != beta - 1;
 
-        if self.board.upcoming_draw() {return 0;}
-        
+        if self.board.upcoming_draw() {
+            return 0;
+        }
+
         let mut tt_entry: Option<TranspositionInfo> = None;
 
         if self.options.use_tt {
-            tt_entry = self.transposition_table
-                .probe(self.board);
+            tt_entry = self.transposition_table.probe(self.board);
         }
 
         if let Some(entry) = tt_entry {
@@ -356,9 +450,21 @@ impl<'a> Searcher<'a> {
         let mut mvs = MoveList::default();
         self.board.gen_legal_moves(&mut mvs, true);
         if let Some(entry) = tt_entry {
-            self.board.score_moves(&mut mvs, entry.best_move, &self.search_stack, &self.history_table, ply);
+            self.board.score_moves(
+                &mut mvs,
+                entry.best_move,
+                &self.search_stack,
+                &self.history_table,
+                ply,
+            );
         } else {
-            self.board.score_moves(&mut mvs, Move::null(), &self.search_stack, &self.history_table, ply);
+            self.board.score_moves(
+                &mut mvs,
+                Move::null(),
+                &self.search_stack,
+                &self.history_table,
+                ply,
+            );
         }
 
         // Main search
@@ -377,10 +483,16 @@ impl<'a> Searcher<'a> {
                 continue;
             }
 
-            let is_capture = mv.to & (self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces)) != 0;
-            
+            let is_capture = mv.to
+                & (self.board.get_bitboard(PieceType::WhitePieces)
+                    | self.board.get_bitboard(PieceType::BlackPieces))
+                != 0;
+
             self.board.make_move(&mv);
-            self.search_stack[ply] = SearchStackEntry { mv, capt: is_capture };
+            self.search_stack[ply] = SearchStackEntry {
+                mv,
+                capt: is_capture,
+            };
 
             let eval = -self.qsearch(-beta, -alpha, ply + 1);
 
@@ -419,15 +531,28 @@ impl<'a> Searcher<'a> {
         self.search(depth as i32, -30000, 30000, 0, timer);
 
         if timer.elapsed().as_millis() > 0 {
-            print!("info depth {} nodes {} nps {} score cp {} time {}", depth, self.nodes, 1000 * self.nodes / timer.elapsed().as_millis(), self.root_best_eval, timer.elapsed().as_millis());
+            print!(
+                "info depth {} nodes {} nps {} score cp {} time {}",
+                depth,
+                self.nodes,
+                1000 * self.nodes / timer.elapsed().as_millis(),
+                self.root_best_eval,
+                timer.elapsed().as_millis()
+            );
         } else {
-            print!("info depth {} nodes {} score cp {} time {}", depth, self.nodes, self.root_best_eval, timer.elapsed().as_millis());
+            print!(
+                "info depth {} nodes {} score cp {} time {}",
+                depth,
+                self.nodes,
+                self.root_best_eval,
+                timer.elapsed().as_millis()
+            );
         }
 
         print!(" pv");
 
         let mut tm = self.top_move();
-        
+
         let mut mvs = 0;
         while tm.is_some() {
             print!(" {}", move_to_chess(tm.unwrap()));
@@ -451,12 +576,11 @@ impl<'a> Searcher<'a> {
     }
 
     pub fn top_move(&self) -> Option<Move> {
-        let entry = self.transposition_table
-            .probe(self.board);
+        let entry = self.transposition_table.probe(self.board);
 
         if let Some(info) = entry {
             if info.fail == Fail::NoFail {
-                return Some(info.best_move)
+                return Some(info.best_move);
             }
         }
         None
@@ -475,7 +599,9 @@ impl<'a> Searcher<'a> {
 
         // Go deeper and deeper until either mate is found or time is up
         while timer.elapsed().as_millis() < self.search_ms / 13 && self.search_best_eval < 20000 {
-            if depth == 100 {break}
+            if depth == 100 {
+                break;
+            }
 
             depth += 1;
             let peval = self.root_best_eval;
@@ -501,25 +627,42 @@ impl<'a> Searcher<'a> {
             }
 
             if timer.elapsed().as_millis() > 0 {
-                print!("info depth {} nodes {} nps {} score cp {} time {}", depth, self.nodes, 1000 * self.nodes / timer.elapsed().as_millis(), self.root_best_eval, timer.elapsed().as_millis());
+                print!(
+                    "info depth {} nodes {} nps {} score cp {} time {}",
+                    depth,
+                    self.nodes,
+                    1000 * self.nodes / timer.elapsed().as_millis(),
+                    self.root_best_eval,
+                    timer.elapsed().as_millis()
+                );
             } else {
-                print!("info depth {} nodes {} score cp {} time {}", depth, self.nodes, self.root_best_eval, timer.elapsed().as_millis());
+                print!(
+                    "info depth {} nodes {} score cp {} time {}",
+                    depth,
+                    self.nodes,
+                    self.root_best_eval,
+                    timer.elapsed().as_millis()
+                );
             }
 
             let mut tm = self.top_move();
-            
+
             let mut mvs = 0;
             while tm.is_some() {
-                if self.board.upcoming_draw() {break;}
+                if self.board.upcoming_draw() {
+                    break;
+                }
 
-                if mvs == 0 {print!(" pv");}
+                if mvs == 0 {
+                    print!(" pv");
+                }
 
                 print!(" {}", move_to_chess(tm.unwrap()));
                 self.board.make_move(&tm.unwrap());
                 tm = self.top_move();
                 mvs += 1;
             }
-            
+
             while mvs > 0 {
                 self.board.undo();
                 mvs -= 1;
@@ -551,7 +694,12 @@ impl<'a> Searcher<'a> {
     }
 
     pub fn white_eval(&mut self) -> i32 {
-        self.root_eval() * if self.board.color() == Color::White { 1 } else { -1 }
+        self.root_eval()
+            * if self.board.color() == Color::White {
+                1
+            } else {
+                -1
+            }
     }
 
     pub fn set_search_ms(&mut self, ms: u128) {

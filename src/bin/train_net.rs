@@ -1,6 +1,14 @@
 // This file is essentially copied from Bullet's examples
 
-use bullet::{LocalSettings, TrainingSchedule, TrainingSteps, game::inputs::Chess768, lr, nn::optimiser::AdamW, trainer::save::SavedFormat, value::{ValueTrainerBuilder, loader}, wdl};
+use bullet::{
+    LocalSettings, TrainingSchedule, TrainingSteps,
+    game::inputs::Chess768,
+    lr,
+    nn::optimiser::AdamW,
+    trainer::save::SavedFormat,
+    value::{ValueTrainerBuilder, loader},
+    wdl,
+};
 
 const HIDDEN: usize = 512;
 const SCALE: i32 = 400;
@@ -41,11 +49,20 @@ pub fn main() {
             end_superbatch: 400,
         },
         wdl_scheduler: wdl::ConstantWDL { value: 0.3 },
-        lr_scheduler: lr::StepLR { start: 0.001, gamma: 0.1, step: 18 },
+        lr_scheduler: lr::StepLR {
+            start: 0.001,
+            gamma: 0.1,
+            step: 18,
+        },
         save_rate: 10,
     };
 
-    let settings = LocalSettings { threads: 16, test_set: None, output_directory: "checkpoints", batch_queue_size: 64 };
+    let settings = LocalSettings {
+        threads: 16,
+        test_set: None,
+        output_directory: "checkpoints",
+        batch_queue_size: 64,
+    };
 
     let data_loader = {
         use loader::viribinpack::{Filter, ViriBinpackLoader, ViriFilter};

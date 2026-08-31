@@ -1,6 +1,6 @@
 use crate::board::*;
-use PieceType::*;
 use Flag::*;
+use PieceType::*;
 
 #[derive(Default, Clone, Copy, PartialEq)]
 pub struct Move {
@@ -11,6 +11,11 @@ pub struct Move {
 }
 impl Move {
     pub const fn null() -> Self {
-        Self {from: 0, to: 0, piece_type: WhitePawn, flag: NoFlag}
+        Self {
+            from: 0,
+            to: 0,
+            piece_type: WhitePawn,
+            flag: NoFlag,
+        }
     }
 }

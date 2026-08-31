@@ -5,57 +5,64 @@ use smallvec::{SmallVec, smallvec};
 pub use crate::board;
 use crate::evaluate::Accumulator;
 pub use crate::moves;
-pub use crate::utils::*;
 pub use crate::turn::*;
+pub use crate::utils::*;
 
 // Enums
-use PieceType::*;
 use Color::*;
 use Flag::*;
+use PieceType::*;
 
 #[derive(Default, Clone, Copy, PartialEq, Debug)]
 pub enum PieceType {
     #[default]
-    WhitePawn=0,BlackPawn=1,
-    WhiteKnight=2,BlackKnight=3,
-    WhiteBishop=4,BlackBishop=5,
-    WhiteRook=6,BlackRook=7,
-    WhiteQueen=8,BlackQueen=9,
-    WhiteKing=10,BlackKing=11,
-    WhitePieces=12,BlackPieces=13,
+    WhitePawn = 0,
+    BlackPawn = 1,
+    WhiteKnight = 2,
+    BlackKnight = 3,
+    WhiteBishop = 4,
+    BlackBishop = 5,
+    WhiteRook = 6,
+    BlackRook = 7,
+    WhiteQueen = 8,
+    BlackQueen = 9,
+    WhiteKing = 10,
+    BlackKing = 11,
+    WhitePieces = 12,
+    BlackPieces = 13,
     // Not piecetypes
     // but are stored in bitboards
-    CastleRights=14,
-    EnPassant=15,
+    CastleRights = 14,
+    EnPassant = 15,
 }
 impl PieceType {
-    pub fn shiftedby(self, color:Color) -> PieceType {
+    pub fn shiftedby(self, color: Color) -> PieceType {
         match color {
-            White => {self},
-            Black => {num_to_piece(self as usize + 1)}
+            White => self,
+            Black => num_to_piece(self as usize + 1),
         }
     }
 }
 
 #[derive(Default, Clone, Copy, PartialEq)]
 pub enum Color {
-    #[default] 
-    Black=0,
-    White=1,
+    #[default]
+    Black = 0,
+    White = 1,
 }
 
 impl Color {
     pub fn swapped(&mut self) -> Color {
         match self {
-            Black => {White},
-            White => {Black}
+            Black => White,
+            White => Black,
         }
     }
 }
 
 #[derive(Default, Clone, Copy, PartialEq)]
 pub enum Flag {
-    #[default] 
+    #[default]
     NoFlag,
     WhiteEnPassant,
     BlackEnPassant,
@@ -71,11 +78,11 @@ pub enum Flag {
 
 pub struct MoveList {
     pub moves: SmallVec<[(Move, i32); 32]>,
-    pub pos: usize
+    pub pos: usize,
 }
 impl MoveList {
     pub fn new(moves: SmallVec<[(Move, i32); 32]>, len: usize) -> Self {
-        Self {moves, pos: len}
+        Self { moves, pos: len }
     }
     pub fn push(&mut self, mv: Move) {
         self.moves.push((mv, 0));
@@ -88,13 +95,16 @@ impl MoveList {
 }
 impl Default for MoveList {
     fn default() -> Self {
-        Self {moves: smallvec![], pos: 0}
+        Self {
+            moves: smallvec![],
+            pos: 0,
+        }
     }
 }
 impl Iterator for MoveList {
     type Item = Move;
 
-    fn next(&mut self) -> Option<<Self as Iterator>::Item> { 
+    fn next(&mut self) -> Option<<Self as Iterator>::Item> {
         todo!()
     }
 }
@@ -105,10 +115,10 @@ pub struct BoardState {
     // Bitboards
     bitboards: [u64; 16],
     zobrist_hash: u64,
-    
+
     repetition_bloom: u64,
     repetition_stage: u16,
-    
+
     eval: i32,
     waccum: Accumulator,
     baccum: Accumulator,
@@ -120,14 +130,31 @@ pub struct BoardState {
 impl BoardState {
     pub fn new() -> Self {
         BoardState {
-            bitboards:[65280, 71776119061217280, 66, 4755801206503243776, 36, 2594073385365405696, 129, 9295429630892703744, 16, 1152921504606846976, 8, 576460752303423488,65535, 18446462598732840960,0b1111,0,],
-            zobrist_hash:0,
+            bitboards: [
+                65280,
+                71776119061217280,
+                66,
+                4755801206503243776,
+                36,
+                2594073385365405696,
+                129,
+                9295429630892703744,
+                16,
+                1152921504606846976,
+                8,
+                576460752303423488,
+                65535,
+                18446462598732840960,
+                0b1111,
+                0,
+            ],
+            zobrist_hash: 0,
             eval: 0,
             repetition_stage: 0,
             repetition_bloom: 0,
             waccum: Accumulator::default(),
             baccum: Accumulator::default(),
-            move_counter:0,
+            move_counter: 0,
         }
     }
     pub fn clone(&mut self) -> Self {
@@ -139,7 +166,7 @@ impl BoardState {
             eval: self.eval,
             waccum: self.waccum,
             baccum: self.baccum,
-            move_counter: self.move_counter
+            move_counter: self.move_counter,
         }
     }
     pub fn eval(&self) -> i32 {
@@ -149,7 +176,6 @@ impl BoardState {
         self.bitboards
     }
 }
-
 
 // Board Keeps track of history
 pub struct Board {
@@ -243,19 +269,19 @@ impl Board {
 
         self.update_zobrist_hash_square(square);
         self.state.bitboards[WhitePawn as usize] &= !square;
-        self.state.bitboards[BlackPawn as usize ] &= !square;
-        self.state.bitboards[WhiteKnight as usize ] &= !square;
-        self.state.bitboards[BlackKnight as usize ] &= !square;
-        self.state.bitboards[WhiteBishop as usize ] &= !square;
-        self.state.bitboards[BlackBishop as usize ] &= !square;
-        self.state.bitboards[WhiteRook as usize ] &= !square;
-        self.state.bitboards[BlackRook as usize ] &= !square;
-        self.state.bitboards[WhiteQueen as usize ] &= !square;
-        self.state.bitboards[BlackQueen as usize ] &= !square;
-        self.state.bitboards[WhiteKing as usize ] &= !square;
-        self.state.bitboards[BlackKing as usize ] &= !square;
-        self.state.bitboards[WhitePieces as usize ] &= !square;
-        self.state.bitboards[BlackPieces as usize ] &= !square;
+        self.state.bitboards[BlackPawn as usize] &= !square;
+        self.state.bitboards[WhiteKnight as usize] &= !square;
+        self.state.bitboards[BlackKnight as usize] &= !square;
+        self.state.bitboards[WhiteBishop as usize] &= !square;
+        self.state.bitboards[BlackBishop as usize] &= !square;
+        self.state.bitboards[WhiteRook as usize] &= !square;
+        self.state.bitboards[BlackRook as usize] &= !square;
+        self.state.bitboards[WhiteQueen as usize] &= !square;
+        self.state.bitboards[BlackQueen as usize] &= !square;
+        self.state.bitboards[WhiteKing as usize] &= !square;
+        self.state.bitboards[BlackKing as usize] &= !square;
+        self.state.bitboards[WhitePieces as usize] &= !square;
+        self.state.bitboards[BlackPieces as usize] &= !square;
         self.update_zobrist_hash_square(square);
 
         saved == self.state.bitboards
@@ -267,10 +293,12 @@ impl Board {
     }
 
     pub fn upcoming_draw(&self) -> bool {
-        if self.history.len() == 0 { return false; }
+        if self.history.len() == 0 {
+            return false;
+        }
 
         let mut i = self.history.len() - 1;
-    
+
         if self.history[i].repetition_bloom & self.zobrist_hash() != self.zobrist_hash() {
             return false;
         }
@@ -287,7 +315,6 @@ impl Board {
 
     // Make a move
     pub fn make_move(&mut self, mv: &Move) {
-
         self.history.push(self.state);
 
         self.state.move_counter += 1;
@@ -296,9 +323,9 @@ impl Board {
         self.state.bitboards[EnPassant as usize] = 0;
 
         if mv.piece_type as i32 <= 1 {
-            if mv.from == (mv.to << 16){
+            if mv.from == (mv.to << 16) {
                 self.state.bitboards[EnPassant as usize] = mv.to << 8;
-            } else if mv.to == (mv.from << 16)  {
+            } else if mv.to == (mv.from << 16) {
                 self.state.bitboards[EnPassant as usize] = mv.from << 8;
             }
             self.state.move_counter = 0;
@@ -314,8 +341,11 @@ impl Board {
         match mv.flag {
             NoFlag => {
                 // Reset move counter if attacking
-                if mv.to & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped())) > 0{
-                    self.update_eval_capture(num_to_piece(self.piece_on_sq(mv.to.trailing_zeros() as usize)), mv.to);
+                if mv.to & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped())) > 0 {
+                    self.update_eval_capture(
+                        num_to_piece(self.piece_on_sq(mv.to.trailing_zeros() as usize)),
+                        mv.to,
+                    );
                     self.state.move_counter = 0;
 
                     self.state.repetition_stage += 1;
@@ -325,12 +355,13 @@ impl Board {
                     self.clear_square(mv.to);
                 }
 
-                self.state.bitboards[mv.piece_type as usize ] ^= mv.from | mv.to;
+                self.state.bitboards[mv.piece_type as usize] ^= mv.from | mv.to;
                 self.update_zobrist_hash(mv.from, mv.piece_type);
                 self.update_zobrist_hash(mv.to, mv.piece_type);
                 self.update_eval(mv.piece_type, mv.from, mv.to);
 
-                self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^= mv.from | mv.to;
+                self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^=
+                    mv.from | mv.to;
             }
             WhiteEnPassant => {
                 // Remove attacked pawn
@@ -360,14 +391,18 @@ impl Board {
             }
             KnightPromotion => {
                 // For capture + promote
-                if mv.to & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped())) > 0{
-                    self.update_eval_capture(num_to_piece(self.piece_on_sq(mv.to.trailing_zeros() as usize)), mv.to);
+                if mv.to & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped())) > 0 {
+                    self.update_eval_capture(
+                        num_to_piece(self.piece_on_sq(mv.to.trailing_zeros() as usize)),
+                        mv.to,
+                    );
                     self.state.move_counter = 0;
                     self.clear_square(mv.to);
                 }
                 // Piece changes
                 self.state.bitboards[mv.piece_type as usize] ^= mv.from;
-                self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^= mv.to | mv.from;
+                self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^=
+                    mv.to | mv.from;
                 self.state.bitboards[WhiteKnight.shiftedby(self.color()) as usize] ^= mv.to;
                 self.update_zobrist_hash(mv.from, mv.piece_type);
                 self.update_zobrist_hash(mv.to, WhiteKnight.shiftedby(self.color()));
@@ -379,14 +414,18 @@ impl Board {
             }
             BishopPromotion => {
                 // For capture + promote
-                if mv.to & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped())) > 0{
-                    self.update_eval_capture(num_to_piece(self.piece_on_sq(mv.to.trailing_zeros() as usize)), mv.to);
+                if mv.to & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped())) > 0 {
+                    self.update_eval_capture(
+                        num_to_piece(self.piece_on_sq(mv.to.trailing_zeros() as usize)),
+                        mv.to,
+                    );
                     self.state.move_counter = 0;
                     self.clear_square(mv.to);
                 }
                 // Piece changes
                 self.state.bitboards[mv.piece_type as usize] ^= mv.from;
-                self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^= mv.to | mv.from;
+                self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^=
+                    mv.to | mv.from;
                 self.state.bitboards[WhiteBishop.shiftedby(self.color()) as usize] |= mv.to;
                 self.update_zobrist_hash(mv.from, mv.piece_type);
                 self.update_zobrist_hash(mv.to, WhiteBishop.shiftedby(self.color()));
@@ -398,15 +437,19 @@ impl Board {
             }
             RookPromotion => {
                 // For capture + promote
-                if mv.to & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped())) > 0{
-                    self.update_eval_capture(num_to_piece(self.piece_on_sq(mv.to.trailing_zeros() as usize)), mv.to);
+                if mv.to & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped())) > 0 {
+                    self.update_eval_capture(
+                        num_to_piece(self.piece_on_sq(mv.to.trailing_zeros() as usize)),
+                        mv.to,
+                    );
                     self.state.move_counter = 0;
                     self.clear_square(mv.to);
                 }
                 // Piece changes
                 self.state.bitboards[mv.piece_type as usize] ^= mv.from;
                 self.state.bitboards[WhiteRook.shiftedby(self.color()) as usize] |= mv.to;
-                self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^= mv.to | mv.from;
+                self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^=
+                    mv.to | mv.from;
                 self.update_zobrist_hash(mv.from, mv.piece_type);
                 self.update_zobrist_hash(mv.to, WhiteRook.shiftedby(self.color()));
                 self.update_eval_promotion(WhiteRook.shiftedby(self.color()), mv.from, mv.to);
@@ -417,15 +460,19 @@ impl Board {
             }
             QueenPromotion => {
                 // For capture + promote
-                if mv.to & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped())) > 0{
-                    self.update_eval_capture(num_to_piece(self.piece_on_sq(mv.to.trailing_zeros() as usize)), mv.to);
+                if mv.to & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped())) > 0 {
+                    self.update_eval_capture(
+                        num_to_piece(self.piece_on_sq(mv.to.trailing_zeros() as usize)),
+                        mv.to,
+                    );
                     self.state.move_counter = 0;
                     self.clear_square(mv.to);
                 }
                 // Piece changes
                 self.state.bitboards[mv.piece_type as usize] ^= mv.from;
                 self.state.bitboards[WhiteQueen.shiftedby(self.color()) as usize] |= mv.to;
-                self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^= mv.to | mv.from;
+                self.state.bitboards[WhitePieces.shiftedby(self.color()) as usize] ^=
+                    mv.to | mv.from;
                 self.update_zobrist_hash(mv.from, mv.piece_type);
                 self.update_zobrist_hash(mv.to, WhiteQueen.shiftedby(self.color()));
                 self.update_eval_promotion(WhiteQueen.shiftedby(self.color()), mv.from, mv.to);
@@ -448,7 +495,7 @@ impl Board {
                 self.update_eval(WhiteRook, 0b1, 0b100);
 
                 // Set Color Bitboard
-                self.state.bitboards[WhitePieces as usize] ^= mv.from | mv.to | 5;                
+                self.state.bitboards[WhitePieces as usize] ^= mv.from | mv.to | 5;
             }
             WhiteQueensideCastle => {
                 self.state.bitboards[WhiteKing as usize] ^= mv.from | mv.to;
@@ -470,9 +517,19 @@ impl Board {
                 self.update_eval(BlackKing, mv.from, mv.to);
 
                 self.state.bitboards[BlackRook as usize] ^= 0x500000000000000;
-                self.update_zobrist_hash(0b100000000000000000000000000000000000000000000000000000000, BlackRook);
-                self.update_zobrist_hash(0b10000000000000000000000000000000000000000000000000000000000, BlackRook);
-                self.update_eval(BlackRook, 0b100000000000000000000000000000000000000000000000000000000, 0b10000000000000000000000000000000000000000000000000000000000);
+                self.update_zobrist_hash(
+                    0b100000000000000000000000000000000000000000000000000000000,
+                    BlackRook,
+                );
+                self.update_zobrist_hash(
+                    0b10000000000000000000000000000000000000000000000000000000000,
+                    BlackRook,
+                );
+                self.update_eval(
+                    BlackRook,
+                    0b100000000000000000000000000000000000000000000000000000000,
+                    0b10000000000000000000000000000000000000000000000000000000000,
+                );
                 self.state.bitboards[BlackPieces as usize] ^= mv.from | mv.to | 0x500000000000000;
             }
             BlackQueensideCastle => {
@@ -481,9 +538,19 @@ impl Board {
                 self.update_zobrist_hash(mv.to, BlackKing);
                 self.update_eval(BlackKing, mv.from, mv.to);
                 self.state.bitboards[BlackRook as usize] ^= 0x9000000000000000;
-                self.update_zobrist_hash(0b1000000000000000000000000000000000000000000000000000000000000, BlackRook);
-                self.update_zobrist_hash(0b1000000000000000000000000000000000000000000000000000000000000000, BlackRook);
-                self.update_eval(BlackRook, 0b1000000000000000000000000000000000000000000000000000000000000000, 0b1000000000000000000000000000000000000000000000000000000000000);
+                self.update_zobrist_hash(
+                    0b1000000000000000000000000000000000000000000000000000000000000,
+                    BlackRook,
+                );
+                self.update_zobrist_hash(
+                    0b1000000000000000000000000000000000000000000000000000000000000000,
+                    BlackRook,
+                );
+                self.update_eval(
+                    BlackRook,
+                    0b1000000000000000000000000000000000000000000000000000000000000000,
+                    0b1000000000000000000000000000000000000000000000000000000000000,
+                );
                 self.state.bitboards[BlackPieces as usize] ^= mv.from | mv.to | 0x9000000000000000;
             }
         }
@@ -498,17 +565,26 @@ impl Board {
         if (self.state.bitboards[WhiteRook as usize] & 0b10000000) == 0 {
             self.state.bitboards[CastleRights as usize] &= 0b1011;
         }
-        if (self.state.bitboards[BlackRook as usize] & 0b0000000100000000000000000000000000000000000000000000000000000000) == 0 {
+        if (self.state.bitboards[BlackRook as usize]
+            & 0b0000000100000000000000000000000000000000000000000000000000000000)
+            == 0
+        {
             self.state.bitboards[CastleRights as usize] &= 0b1101;
         }
-        if (self.state.bitboards[BlackRook as usize] & 0b1000000000000000000000000000000000000000000000000000000000000000) == 0 {
+        if (self.state.bitboards[BlackRook as usize]
+            & 0b1000000000000000000000000000000000000000000000000000000000000000)
+            == 0
+        {
             self.state.bitboards[CastleRights as usize] &= 0b1110;
         }
 
         if (self.state.bitboards[WhiteKing as usize] & 0b1000) == 0 {
             self.state.bitboards[CastleRights as usize] &= 0b0011;
         }
-        if (self.state.bitboards[BlackKing as usize] & 0b0000100000000000000000000000000000000000000000000000000000000000) == 0 {
+        if (self.state.bitboards[BlackKing as usize]
+            & 0b0000100000000000000000000000000000000000000000000000000000000000)
+            == 0
+        {
             self.state.bitboards[CastleRights as usize] &= 0b1100;
         }
         self.update_zobrist_hash_castle_rights();
@@ -563,7 +639,7 @@ impl Board {
     }
 
     pub fn clear(&mut self) {
-        self.state.bitboards = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+        self.state.bitboards = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         self.reset_hist();
     }
 
@@ -583,17 +659,27 @@ impl Board {
     pub fn chess_to_move(&self, mv: String) -> Move {
         let pt = self.piece_on_sq(chess_to_square(String::from(&mv[0..2])));
         let flg = self.move_flag(&mv);
-    
-        Move {from: 1 << chess_to_square(String::from(&mv[0..2])), to: 1 << chess_to_square(String::from(&mv[2..4])), piece_type: num_to_piece(pt), flag: num_to_flag(flg)}
+
+        Move {
+            from: 1 << chess_to_square(String::from(&mv[0..2])),
+            to: 1 << chess_to_square(String::from(&mv[2..4])),
+            piece_type: num_to_piece(pt),
+            flag: num_to_flag(flg),
+        }
     }
 
     pub fn move_to_chess(&self, mv: Move) -> String {
-        format!("{}{}{}", bbsquare_to_chess(mv.from), bbsquare_to_chess(mv.to), flag_to_piece(mv.flag))
+        format!(
+            "{}{}{}",
+            bbsquare_to_chess(mv.from),
+            bbsquare_to_chess(mv.to),
+            flag_to_piece(mv.flag)
+        )
     }
 
-    pub fn piece_on_sq_maybe(&self, square: usize) -> usize{
+    pub fn piece_on_sq_maybe(&self, square: usize) -> usize {
         for i in 1..13 {
-            if 1_u64.wrapping_shl(square as u32) & self.get_bitboard(num_to_piece(i-1)) > 0 {
+            if 1_u64.wrapping_shl(square as u32) & self.get_bitboard(num_to_piece(i - 1)) > 0 {
                 return i;
             }
         }
@@ -612,10 +698,10 @@ impl Board {
 
     pub fn move_flag(&self, mv: &str) -> usize {
         let mut flag = 0;
-    
+
         let from = chess_to_square(String::from(&mv[0..2]));
         let to = 1 << chess_to_square(String::from(&mv[2..4])) as u64;
-    
+
         // en passant
         let pt = self.piece_on_sq(chess_to_square(String::from(&mv[0..2])));
         if pt == 0 {
@@ -628,25 +714,25 @@ impl Board {
                 flag = 2;
             }
         }
-    
+
         // Promotions
         if mv.len() == 5 {
             match mv.chars().nth(4).unwrap() {
-                'n' => {flag = 3},
-                'b' => {flag = 4},
-                'r' => {flag = 5},
-                'q' => {flag = 6},
+                'n' => flag = 3,
+                'b' => flag = 4,
+                'r' => flag = 5,
+                'q' => flag = 6,
                 _ => {}
             }
         }
-    
+
         // Castling
         if pt == 10 || pt == 11 {
             match mv {
-                "e1g1" => {flag = 7},
-                "e1c1" => {flag = 8},
-                "e8g8" => {flag = 9},
-                "e8c8" => {flag = 10},
+                "e1g1" => flag = 7,
+                "e1c1" => flag = 8,
+                "e8g8" => flag = 9,
+                "e8c8" => flag = 10,
                 _ => {}
             }
         }
@@ -657,7 +743,7 @@ impl Board {
     pub fn get_nth_prev_boardstate(&self, n: usize) -> BoardState {
         match n {
             0 => self.state,
-            k => self.history[self.history.len() - k]
+            k => self.history[self.history.len() - k],
         }
     }
 
@@ -668,22 +754,25 @@ impl Board {
     pub fn output(&self) {
         for x in 0..8 {
             for y in 0..8 {
-                print!("{}", match self.piece_on_sq_maybe(8 * x + y) {
-                    0 => ".",
-                    1 => "p",
-                    2 => "P",
-                    3 => "n",
-                    4 => "N",
-                    5 => "b",
-                    6 => "B",
-                    7 => "r",
-                    8 => "R",
-                    9 => "q",
-                    10 => "Q",
-                    11 => "k",
-                    12 => "K",
-                    _ => ""
-                });
+                print!(
+                    "{}",
+                    match self.piece_on_sq_maybe(8 * x + y) {
+                        0 => ".",
+                        1 => "p",
+                        2 => "P",
+                        3 => "n",
+                        4 => "N",
+                        5 => "b",
+                        6 => "B",
+                        7 => "r",
+                        8 => "R",
+                        9 => "q",
+                        10 => "Q",
+                        11 => "k",
+                        12 => "K",
+                        _ => "",
+                    }
+                );
             }
             println!();
         }
@@ -701,8 +790,8 @@ impl Board {
         let sqtz = mv.to.trailing_zeros() as usize;
 
         let mut val: i32 = match self.piece_on_sq_maybe(sq.trailing_zeros() as usize) {
-            0 => { 0 }
-            n => { -SEE_VALS[n - 1] }
+            0 => 0,
+            n => -SEE_VALS[n - 1],
         };
 
         let pt = PieceType::WhitePieces.shiftedby(self.color());
@@ -717,33 +806,54 @@ impl Board {
             _ => 0,
         } * (self.color() as i32 * 2 - 1);
 
-
-        let mut threatened = match mv.flag { 
+        let mut threatened = match mv.flag {
             QueenPromotion => WhiteQueen.shiftedby(self.color()),
             RookPromotion => WhiteRook.shiftedby(self.color()),
             BishopPromotion => WhiteBishop.shiftedby(self.color()),
             KnightPromotion => WhiteKnight.shiftedby(self.color()),
 
-            _ => mv.piece_type
+            _ => mv.piece_type,
         } as usize;
 
-        let wpawns = self.get_bitboard(WhitePawn) & self.bpawn_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces);
-        let bpawns = self.get_bitboard(BlackPawn) & self.wpawn_bbmoves_atk(sqtz) & self.get_bitboard(BlackPieces);
+        let wpawns = self.get_bitboard(WhitePawn)
+            & self.bpawn_bbmoves_atk(sqtz)
+            & self.get_bitboard(WhitePieces);
+        let bpawns = self.get_bitboard(BlackPawn)
+            & self.wpawn_bbmoves_atk(sqtz)
+            & self.get_bitboard(BlackPieces);
 
-        let wknights = self.get_bitboard(WhiteKnight) & self.knight_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces);
-        let bknights = self.get_bitboard(BlackKnight) & self.knight_bbmoves_atk(sqtz) & self.get_bitboard(BlackPieces);
+        let wknights = self.get_bitboard(WhiteKnight)
+            & self.knight_bbmoves_atk(sqtz)
+            & self.get_bitboard(WhitePieces);
+        let bknights = self.get_bitboard(BlackKnight)
+            & self.knight_bbmoves_atk(sqtz)
+            & self.get_bitboard(BlackPieces);
 
-        let wbishs = self.get_bitboard(WhiteBishop) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces);
-        let bbishs = self.get_bitboard(BlackBishop) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(BlackPieces);
+        let wbishs = self.get_bitboard(WhiteBishop)
+            & self.bishop_bbmoves_atk(sqtz)
+            & self.get_bitboard(WhitePieces);
+        let bbishs = self.get_bitboard(BlackBishop)
+            & self.bishop_bbmoves_atk(sqtz)
+            & self.get_bitboard(BlackPieces);
 
-        let wrooks = self.get_bitboard(WhiteRook) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces);
-        let brooks = self.get_bitboard(BlackRook) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(BlackPieces);
+        let wrooks = self.get_bitboard(WhiteRook)
+            & self.rook_bbmoves_atk(sqtz)
+            & self.get_bitboard(WhitePieces);
+        let brooks = self.get_bitboard(BlackRook)
+            & self.rook_bbmoves_atk(sqtz)
+            & self.get_bitboard(BlackPieces);
 
-        let wqueens = self.get_bitboard(WhiteQueen) & self.queen_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces);
-        let bqueens = self.get_bitboard(BlackQueen) & self.queen_bbmoves_atk(sqtz) & self.get_bitboard(BlackPieces);
+        let wqueens = self.get_bitboard(WhiteQueen)
+            & self.queen_bbmoves_atk(sqtz)
+            & self.get_bitboard(WhitePieces);
+        let bqueens = self.get_bitboard(BlackQueen)
+            & self.queen_bbmoves_atk(sqtz)
+            & self.get_bitboard(BlackPieces);
 
-
-        let infotab = [[bqueens, brooks, bbishs, bknights, bpawns],[wqueens, wrooks, wbishs, wknights, wpawns]];
+        let infotab = [
+            [bqueens, brooks, bbishs, bknights, bpawns],
+            [wqueens, wrooks, wbishs, wknights, wpawns],
+        ];
 
         let mut opp = infotab[self.color().swapped() as usize].clone();
         let mut opp_len = 5;
@@ -767,7 +877,14 @@ impl Board {
                     all_len -= 1;
                 }
 
-                if all_len == 0 && self.king_bbmoves_atk(sqtz) & self.get_bitboard(WhiteKing.shiftedby(self.color())) == 0 && self.king_bbmoves_atk(sqtz) & self.get_bitboard(WhiteKing.shiftedby(self.color().swapped())) != 0 {
+                if all_len == 0
+                    && self.king_bbmoves_atk(sqtz)
+                        & self.get_bitboard(WhiteKing.shiftedby(self.color()))
+                        == 0
+                    && self.king_bbmoves_atk(sqtz)
+                        & self.get_bitboard(WhiteKing.shiftedby(self.color().swapped()))
+                        != 0
+                {
                     val -= SEE_VALS[threatened];
                 }
 
@@ -784,22 +901,38 @@ impl Board {
 
             if olm == 1 || olm == 0 {
                 all_len = all_len.max(2);
-                all[1] |= self.get_bitboard(WhiteRook.shiftedby(self.color())) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color()));
-                all[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color())) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color()));
+                all[1] |= self.get_bitboard(WhiteRook.shiftedby(self.color()))
+                    & self.rook_bbmoves_atk(sqtz)
+                    & self.get_bitboard(WhitePieces.shiftedby(self.color()));
+                all[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color()))
+                    & self.rook_bbmoves_atk(sqtz)
+                    & self.get_bitboard(WhitePieces.shiftedby(self.color()));
 
                 opp_len = opp_len.max(2);
-                opp[1] |= self.get_bitboard(WhiteRook.shiftedby(self.color().swapped())) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
-                opp[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color().swapped())) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
+                opp[1] |= self.get_bitboard(WhiteRook.shiftedby(self.color().swapped()))
+                    & self.rook_bbmoves_atk(sqtz)
+                    & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
+                opp[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color().swapped()))
+                    & self.rook_bbmoves_atk(sqtz)
+                    & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
             }
 
             if olm == 4 || olm == 2 || olm == 0 {
                 all_len = all_len.max(3);
-                all[2] |= self.get_bitboard(WhiteBishop.shiftedby(self.color())) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color()));
-                all[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color())) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color()));
+                all[2] |= self.get_bitboard(WhiteBishop.shiftedby(self.color()))
+                    & self.bishop_bbmoves_atk(sqtz)
+                    & self.get_bitboard(WhitePieces.shiftedby(self.color()));
+                all[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color()))
+                    & self.bishop_bbmoves_atk(sqtz)
+                    & self.get_bitboard(WhitePieces.shiftedby(self.color()));
 
                 opp_len = opp_len.max(3);
-                opp[2] |= self.get_bitboard(WhiteBishop.shiftedby(self.color().swapped())) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
-                opp[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color().swapped())) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
+                opp[2] |= self.get_bitboard(WhiteBishop.shiftedby(self.color().swapped()))
+                    & self.bishop_bbmoves_atk(sqtz)
+                    & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
+                opp[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color().swapped()))
+                    & self.bishop_bbmoves_atk(sqtz)
+                    & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
             }
 
             // println!("{:?}", opp);
@@ -819,7 +952,14 @@ impl Board {
                     opp_len -= 1;
                 }
 
-                if opp_len == 0 && self.king_bbmoves_atk(sqtz) & self.get_bitboard(WhiteKing.shiftedby(self.color())) != 0 && self.king_bbmoves_atk(sqtz) & self.get_bitboard(WhiteKing.shiftedby(self.color().swapped())) == 0 {
+                if opp_len == 0
+                    && self.king_bbmoves_atk(sqtz)
+                        & self.get_bitboard(WhiteKing.shiftedby(self.color()))
+                        != 0
+                    && self.king_bbmoves_atk(sqtz)
+                        & self.get_bitboard(WhiteKing.shiftedby(self.color().swapped()))
+                        == 0
+                {
                     val -= SEE_VALS[threatened];
                 }
 
@@ -836,23 +976,38 @@ impl Board {
 
             if alm == 1 || alm == 0 {
                 all_len = all_len.max(2);
-                all[1] |= self.get_bitboard(WhiteRook.shiftedby(self.color())) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color()));
-                all[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color())) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color()));
+                all[1] |= self.get_bitboard(WhiteRook.shiftedby(self.color()))
+                    & self.rook_bbmoves_atk(sqtz)
+                    & self.get_bitboard(WhitePieces.shiftedby(self.color()));
+                all[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color()))
+                    & self.rook_bbmoves_atk(sqtz)
+                    & self.get_bitboard(WhitePieces.shiftedby(self.color()));
 
                 opp_len = opp_len.max(2);
-                opp[1] |= self.get_bitboard(WhiteRook.shiftedby(self.color().swapped())) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
-                opp[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color().swapped())) & self.rook_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
+                opp[1] |= self.get_bitboard(WhiteRook.shiftedby(self.color().swapped()))
+                    & self.rook_bbmoves_atk(sqtz)
+                    & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
+                opp[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color().swapped()))
+                    & self.rook_bbmoves_atk(sqtz)
+                    & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
             }
 
             if alm == 4 || alm == 2 || alm == 0 {
                 all_len = all_len.max(3);
-                all[2] |= self.get_bitboard(WhiteBishop.shiftedby(self.color())) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color()));
-                all[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color())) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color()));
+                all[2] |= self.get_bitboard(WhiteBishop.shiftedby(self.color()))
+                    & self.bishop_bbmoves_atk(sqtz)
+                    & self.get_bitboard(WhitePieces.shiftedby(self.color()));
+                all[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color()))
+                    & self.bishop_bbmoves_atk(sqtz)
+                    & self.get_bitboard(WhitePieces.shiftedby(self.color()));
 
                 opp_len = opp_len.max(3);
-                opp[2] |= self.get_bitboard(WhiteBishop.shiftedby(self.color().swapped())) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
-                opp[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color().swapped())) & self.bishop_bbmoves_atk(sqtz) & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
-
+                opp[2] |= self.get_bitboard(WhiteBishop.shiftedby(self.color().swapped()))
+                    & self.bishop_bbmoves_atk(sqtz)
+                    & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
+                opp[0] |= self.get_bitboard(WhiteQueen.shiftedby(self.color().swapped()))
+                    & self.bishop_bbmoves_atk(sqtz)
+                    & self.get_bitboard(WhitePieces.shiftedby(self.color().swapped()));
             }
         }
         // println!();
@@ -864,21 +1019,28 @@ impl Board {
 }
 
 // Some useful functions
-const PIECE_TYPES:[PieceType; 16] = [
-    WhitePawn,BlackPawn,
-    WhiteKnight,BlackKnight,
-    WhiteBishop,BlackBishop,
-    WhiteRook,BlackRook,
-    WhiteQueen,BlackQueen,
-    WhiteKing,BlackKing,
-    WhitePieces,BlackPieces,
+const PIECE_TYPES: [PieceType; 16] = [
+    WhitePawn,
+    BlackPawn,
+    WhiteKnight,
+    BlackKnight,
+    WhiteBishop,
+    BlackBishop,
+    WhiteRook,
+    BlackRook,
+    WhiteQueen,
+    BlackQueen,
+    WhiteKing,
+    BlackKing,
+    WhitePieces,
+    BlackPieces,
     CastleRights,
-    EnPassant
+    EnPassant,
 ];
 pub fn num_to_piece(num: usize) -> PieceType {
     PIECE_TYPES[num]
 }
-const FLAGS:[Flag; 11] = [
+const FLAGS: [Flag; 11] = [
     NoFlag,
     WhiteEnPassant,
     BlackEnPassant,
@@ -901,6 +1063,6 @@ pub fn flag_to_piece(flag: Flag) -> String {
         BishopPromotion => "b".to_string(),
         RookPromotion => "r".to_string(),
         QueenPromotion => "q".to_string(),
-        _ => "".to_string()
+        _ => "".to_string(),
     }
 }

@@ -7,7 +7,9 @@ impl BoardState {
 
         let bbs = self.bitboards();
         for i in 0..bbs.len() {
-            if num_to_piece(i) == PieceType::WhitePieces || num_to_piece(i) == PieceType::BlackPieces {
+            if num_to_piece(i) == PieceType::WhitePieces
+                || num_to_piece(i) == PieceType::BlackPieces
+            {
                 continue;
             }
 
@@ -18,7 +20,7 @@ impl BoardState {
         }
         match color {
             Color::Black => hash ^= RANDS[1024],
-            Color::White => hash ^= RANDS[1025]
+            Color::White => hash ^= RANDS[1025],
         }
 
         hash
@@ -29,7 +31,10 @@ impl Board {
         self.set_zobrist_hash(self.state().zobrist_hash(self.color()));
     }
     pub fn update_zobrist_hash(&mut self, square: u64, piece_type: PieceType) {
-        self.set_zobrist_hash(self.zobrist_hash() ^ RANDS[(piece_type as usize) * 64 + square.trailing_zeros() as usize]);
+        self.set_zobrist_hash(
+            self.zobrist_hash()
+                ^ RANDS[(piece_type as usize) * 64 + square.trailing_zeros() as usize],
+        );
     }
     pub fn update_zobrist_hash_square(&mut self, square: u64) {
         for pt in PieceType::WhitePawn as usize..PieceType::BlackKing as usize {

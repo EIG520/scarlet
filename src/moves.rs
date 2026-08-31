@@ -13,7 +13,7 @@ macro_rules! bitloop {
 pub(crate) use bitloop;
 
 impl Board {
-    pub fn gen_legal_moves(&mut self, moves: &mut MoveList, loud: bool){
+    pub fn gen_legal_moves(&mut self, moves: &mut MoveList, loud: bool) {
         // Make some shared data
         self.gen_checkmask();
         self.gen_hit_squares();
@@ -25,69 +25,76 @@ impl Board {
         self.bishop_pinned_legal_moves(moves, loud);
     }
 
-    pub fn unpinned_legal_moves(&mut self, moves: &mut MoveList, loud: bool){
+    pub fn unpinned_legal_moves(&mut self, moves: &mut MoveList, loud: bool) {
         // Checkmask
         let attacked_squares = self.attacked();
 
         let checkmask = self.checkmask();
 
         // Mask out quiet moves if loud only
-        let loudmask = if loud {self.get_bitboard(PieceType::WhitePieces.shiftedby(self.color().swapped()))} else {u64::MAX};
+        let loudmask = if loud {
+            self.get_bitboard(PieceType::WhitePieces.shiftedby(self.color().swapped()))
+        } else {
+            u64::MAX
+        };
 
         // Pinmasks
         let pinmask = self.rook_pinmask() | self.bishop_pinmask();
 
-
         let pawns = self.get_bitboard(PieceType::WhitePawn.shiftedby(self.color())) & !pinmask;
         match self.color() {
-            Color::White => {bitloop!(pawns{
-                let bbmoves = self.wpawn_bbmoves(pawns.blsi().trailing_zeros() as usize) & checkmask;
-                if bbmoves & 0xFF000000000000FF > 0 {
-                    bitloop!(bbmoves{
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::KnightPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::BishopPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::RookPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::QueenPromotion});
-                    });
-                } else {
-                    let mbmoves = bbmoves & loudmask;
-                    bitloop!(mbmoves{
-                        moves.push(Move { from: pawns.blsi(), to: mbmoves.blsi(), piece_type: PieceType::WhitePawn, flag : Flag::NoFlag});
-                    });
-                    let epmove = self.wpawn_epmoves(pawns.blsi().trailing_zeros() as usize) & (checkmask << 8);
+            Color::White => {
+                bitloop!(pawns{
+                    let bbmoves = self.wpawn_bbmoves(pawns.blsi().trailing_zeros() as usize) & checkmask;
+                    if bbmoves & 0xFF000000000000FF > 0 {
+                        bitloop!(bbmoves{
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::KnightPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::BishopPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::RookPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::QueenPromotion});
+                        });
+                    } else {
+                        let mbmoves = bbmoves & loudmask;
+                        bitloop!(mbmoves{
+                            moves.push(Move { from: pawns.blsi(), to: mbmoves.blsi(), piece_type: PieceType::WhitePawn, flag : Flag::NoFlag});
+                        });
+                        let epmove = self.wpawn_epmoves(pawns.blsi().trailing_zeros() as usize) & (checkmask << 8);
 
-                    if epmove > 0 {
-                        if self.verify_ep(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::WhitePawn, flag : Flag::WhiteEnPassant}) {
-                            moves.push(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::WhitePawn, flag : Flag::WhiteEnPassant});
+                        if epmove > 0 {
+                            if self.verify_ep(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::WhitePawn, flag : Flag::WhiteEnPassant}) {
+                                moves.push(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::WhitePawn, flag : Flag::WhiteEnPassant});
+                            }
                         }
                     }
-                }
-            });},
-            Color::Black => {bitloop!(pawns{
-                let bbmoves = self.bpawn_bbmoves(pawns.blsi().trailing_zeros() as usize) & checkmask;
-                if bbmoves & 0xFF000000000000FF > 0 {
-                    bitloop!(bbmoves{
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::KnightPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::BishopPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::RookPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::QueenPromotion});
-                    });
-                } else {
-                    let mbmoves = bbmoves & loudmask;
-                    bitloop!(mbmoves{
-                        moves.push(Move { from: pawns.blsi(), to: mbmoves.blsi(), piece_type: PieceType::BlackPawn, flag : Flag::NoFlag});
-                    });
-                    let epmove = self.bpawn_epmoves(pawns.blsi().trailing_zeros() as usize) & (checkmask >> 8);
+                });
+            }
+            Color::Black => {
+                bitloop!(pawns{
+                    let bbmoves = self.bpawn_bbmoves(pawns.blsi().trailing_zeros() as usize) & checkmask;
+                    if bbmoves & 0xFF000000000000FF > 0 {
+                        bitloop!(bbmoves{
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::KnightPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::BishopPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::RookPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::QueenPromotion});
+                        });
+                    } else {
+                        let mbmoves = bbmoves & loudmask;
+                        bitloop!(mbmoves{
+                            moves.push(Move { from: pawns.blsi(), to: mbmoves.blsi(), piece_type: PieceType::BlackPawn, flag : Flag::NoFlag});
+                        });
+                        let epmove = self.bpawn_epmoves(pawns.blsi().trailing_zeros() as usize) & (checkmask >> 8);
 
-                    if epmove > 0 {
-                        if self.verify_ep(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::BlackPawn, flag : Flag::BlackEnPassant}) {
-                            moves.push(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::BlackPawn, flag : Flag::BlackEnPassant});
+                        if epmove > 0 {
+                            if self.verify_ep(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::BlackPawn, flag : Flag::BlackEnPassant}) {
+                                moves.push(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::BlackPawn, flag : Flag::BlackEnPassant});
+                            }
                         }
                     }
-                }
-            });},
+                });
+            }
         }
-        
+
         let knights = self.get_bitboard(PieceType::WhiteKnight.shiftedby(self.color())) & !pinmask;
         bitloop!(knights{
             let bbmoves = self.knight_bbmoves(knights.blsi().trailing_zeros() as usize) & checkmask & loudmask;
@@ -115,7 +122,7 @@ impl Board {
             bitloop!(bbmoves{
                 moves.push(Move { from: queens.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhiteQueen.shiftedby(self.color()), flag: Flag::NoFlag});
             });
-        });        
+        });
         let kings = self.get_bitboard(PieceType::WhiteKing.shiftedby(self.color()));
         bitloop!(kings{
             let bbmoves = self.king_bbmoves(kings.blsi().trailing_zeros() as usize) & !attacked_squares & loudmask;
@@ -125,73 +132,117 @@ impl Board {
         });
         // Castling
         if checkmask == u64::MAX {
-            let open = !(self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces));
+            let open = !(self.get_bitboard(PieceType::WhitePieces)
+                | self.get_bitboard(PieceType::BlackPieces));
 
+            if (self.get_bitboard(PieceType::CastleRights) & 0b1000 > 0)
+                && (attacked_squares & 0b0110 == 0)
+                && (open & 0b0110 == 0b0110)
+                && (self.color() == Color::White)
+            {
+                moves.push(Move {
+                    from: 0b1000,
+                    to: 0b0010,
+                    piece_type: PieceType::WhiteKing,
+                    flag: Flag::WhiteKingsideCastle,
+                });
+            }
+            if (self.get_bitboard(PieceType::CastleRights) & 0b0100 > 0)
+                && (attacked_squares & 0b00110000 == 0)
+                && (open & 0b01110000 == 0b01110000)
+                && (self.color() == Color::White)
+            {
+                moves.push(Move {
+                    from: 0b1000,
+                    to: 0b00100000,
+                    piece_type: PieceType::WhiteKing,
+                    flag: Flag::WhiteQueensideCastle,
+                });
+            }
 
-            if (self.get_bitboard(PieceType::CastleRights) & 0b1000 > 0) && (attacked_squares & 0b0110 == 0) && (open & 0b0110 == 0b0110) && (self.color() == Color::White){
-                moves.push(Move { from: 0b1000, to: 0b0010, piece_type: PieceType::WhiteKing, flag: Flag::WhiteKingsideCastle});
+            if (self.get_bitboard(PieceType::CastleRights) & 0b0010 > 0)
+                && (attacked_squares & 0x600000000000000 == 0)
+                && (open & 0x600000000000000 == 0x600000000000000)
+                && (self.color() == Color::Black)
+            {
+                moves.push(Move {
+                    from: 0x800000000000000,
+                    to: 0x200000000000000,
+                    piece_type: PieceType::BlackKing,
+                    flag: Flag::BlackKingsideCastle,
+                });
             }
-            if (self.get_bitboard(PieceType::CastleRights) & 0b0100 > 0) && (attacked_squares & 0b00110000 == 0) && (open & 0b01110000 == 0b01110000) && (self.color() == Color::White){
-                moves.push(Move { from: 0b1000, to: 0b00100000, piece_type: PieceType::WhiteKing, flag: Flag::WhiteQueensideCastle});
-            }
-
-            if (self.get_bitboard(PieceType::CastleRights) & 0b0010 > 0) && (attacked_squares & 0x600000000000000 == 0) && (open & 0x600000000000000 == 0x600000000000000) &&  (self.color() == Color::Black){
-                moves.push(Move { from: 0x800000000000000, to: 0x200000000000000, piece_type: PieceType::BlackKing, flag: Flag::BlackKingsideCastle});
-            }
-            if (self.get_bitboard(PieceType::CastleRights) & 0b0001 > 0) && (attacked_squares & 0x3000000000000000 == 0) && (open & 0x7000000000000000 == 0x7000000000000000) && (self.color() == Color::Black){
-                moves.push(Move { from: 0x800000000000000, to: 0x2000000000000000, piece_type: PieceType::BlackKing, flag: Flag::BlackQueensideCastle});
+            if (self.get_bitboard(PieceType::CastleRights) & 0b0001 > 0)
+                && (attacked_squares & 0x3000000000000000 == 0)
+                && (open & 0x7000000000000000 == 0x7000000000000000)
+                && (self.color() == Color::Black)
+            {
+                moves.push(Move {
+                    from: 0x800000000000000,
+                    to: 0x2000000000000000,
+                    piece_type: PieceType::BlackKing,
+                    flag: Flag::BlackQueensideCastle,
+                });
             }
         }
     }
 
-    pub fn rook_pinned_legal_moves(&mut self, moves: &mut MoveList, loud: bool){
+    pub fn rook_pinned_legal_moves(&mut self, moves: &mut MoveList, loud: bool) {
         let checkmask = self.checkmask();
-        let loudmask = if loud {self.get_bitboard(PieceType::WhitePieces.shiftedby(self.color().swapped()))} else {u64::MAX};
+        let loudmask = if loud {
+            self.get_bitboard(PieceType::WhitePieces.shiftedby(self.color().swapped()))
+        } else {
+            u64::MAX
+        };
 
         let pinmask = self.rook_pinmask();
 
         let pawns = self.get_bitboard(PieceType::WhitePawn.shiftedby(self.color())) & pinmask;
         match self.color() {
-            Color::White => {bitloop!(pawns{
-                let bbmoves = self.quiet_wpawn_bbmoves(pawns.blsi().trailing_zeros() as usize) & checkmask & pinmask & loudmask;
-                if bbmoves & 0xFF000000000000FF > 0 {
-                    bitloop!(bbmoves{
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::KnightPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::BishopPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::RookPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::QueenPromotion});
-                    });
-                } else {
-                    bitloop!(bbmoves{
-                        moves.push(Move { from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag : Flag::NoFlag});
-                    });
-                    let epmove = self.wpawn_epmoves(pawns.blsi().trailing_zeros() as usize) & (checkmask >> 8) & pinmask & loudmask;
-                    if epmove > 0 {
-                        moves.push(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::WhitePawn, flag : Flag::WhiteEnPassant});
+            Color::White => {
+                bitloop!(pawns{
+                    let bbmoves = self.quiet_wpawn_bbmoves(pawns.blsi().trailing_zeros() as usize) & checkmask & pinmask & loudmask;
+                    if bbmoves & 0xFF000000000000FF > 0 {
+                        bitloop!(bbmoves{
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::KnightPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::BishopPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::RookPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::QueenPromotion});
+                        });
+                    } else {
+                        bitloop!(bbmoves{
+                            moves.push(Move { from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag : Flag::NoFlag});
+                        });
+                        let epmove = self.wpawn_epmoves(pawns.blsi().trailing_zeros() as usize) & (checkmask >> 8) & pinmask & loudmask;
+                        if epmove > 0 {
+                            moves.push(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::WhitePawn, flag : Flag::WhiteEnPassant});
+                        }
                     }
-                }
-            });},
-            Color::Black => {bitloop!(pawns{
-                let bbmoves = self.quiet_bpawn_bbmoves(pawns.blsi().trailing_zeros() as usize)& checkmask & pinmask & loudmask;
-                if bbmoves & 0xFF000000000000FF > 0 {
-                    bitloop!(bbmoves{
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::KnightPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::BishopPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::RookPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::QueenPromotion});
-                    });
-                } else {
-                    bitloop!(bbmoves{
-                        moves.push(Move { from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag : Flag::NoFlag});
-                    });
-                    let epmove = self.bpawn_epmoves(pawns.blsi().trailing_zeros() as usize) &  (checkmask << 8) & pinmask & loudmask;
-                    if epmove > 0 {
-                        moves.push(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::BlackPawn, flag : Flag::BlackEnPassant});
+                });
+            }
+            Color::Black => {
+                bitloop!(pawns{
+                    let bbmoves = self.quiet_bpawn_bbmoves(pawns.blsi().trailing_zeros() as usize)& checkmask & pinmask & loudmask;
+                    if bbmoves & 0xFF000000000000FF > 0 {
+                        bitloop!(bbmoves{
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::KnightPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::BishopPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::RookPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::QueenPromotion});
+                        });
+                    } else {
+                        bitloop!(bbmoves{
+                            moves.push(Move { from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag : Flag::NoFlag});
+                        });
+                        let epmove = self.bpawn_epmoves(pawns.blsi().trailing_zeros() as usize) &  (checkmask << 8) & pinmask & loudmask;
+                        if epmove > 0 {
+                            moves.push(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::BlackPawn, flag : Flag::BlackEnPassant});
+                        }
                     }
-                }
-            });},
+                });
+            }
         }
-        
+
         let rooks = self.get_bitboard(PieceType::WhiteRook.shiftedby(self.color())) & pinmask;
         bitloop!(rooks{
             let bbmoves = self.rook_bbmoves(rooks.blsi().trailing_zeros() as usize) & checkmask & pinmask & loudmask;
@@ -212,54 +263,62 @@ impl Board {
 
     pub fn bishop_pinned_legal_moves(&mut self, moves: &mut MoveList, loud: bool) {
         let checkmask = self.checkmask();
-        let loudmask = if loud {self.get_bitboard(PieceType::WhitePieces.shiftedby(self.color().swapped()))} else {u64::MAX};
+        let loudmask = if loud {
+            self.get_bitboard(PieceType::WhitePieces.shiftedby(self.color().swapped()))
+        } else {
+            u64::MAX
+        };
 
         let pinmask = self.bishop_pinmask();
 
         let pawns = self.get_bitboard(PieceType::WhitePawn.shiftedby(self.color())) & pinmask;
         match self.color() {
-            Color::White => {bitloop!(pawns{
-                let bbmoves = self.wpawn_bbmoves_atk(pawns.blsi().trailing_zeros() as usize) & self.enemy_squares() & checkmask & pinmask & loudmask;
-                if bbmoves & 0xFF000000000000FF > 0 {
-                    bitloop!(bbmoves{
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::KnightPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::BishopPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::RookPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::QueenPromotion});
-                    });
-                } else {
-                    bitloop!(bbmoves{
-                        moves.push(Move { from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag : Flag::NoFlag});
-                    });
-                    let epmove = self.wpawn_epmoves(pawns.blsi().trailing_zeros() as usize) & (checkmask >> 8) & pinmask & loudmask;
-                    if epmove > 0 {
-                        if self.verify_ep(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::WhitePawn, flag : Flag::WhiteEnPassant}) {
-                            moves.push(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::WhitePawn, flag : Flag::WhiteEnPassant});
+            Color::White => {
+                bitloop!(pawns{
+                    let bbmoves = self.wpawn_bbmoves_atk(pawns.blsi().trailing_zeros() as usize) & self.enemy_squares() & checkmask & pinmask & loudmask;
+                    if bbmoves & 0xFF000000000000FF > 0 {
+                        bitloop!(bbmoves{
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::KnightPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::BishopPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::RookPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag: Flag::QueenPromotion});
+                        });
+                    } else {
+                        bitloop!(bbmoves{
+                            moves.push(Move { from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhitePawn, flag : Flag::NoFlag});
+                        });
+                        let epmove = self.wpawn_epmoves(pawns.blsi().trailing_zeros() as usize) & (checkmask >> 8) & pinmask & loudmask;
+                        if epmove > 0 {
+                            if self.verify_ep(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::WhitePawn, flag : Flag::WhiteEnPassant}) {
+                                moves.push(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::WhitePawn, flag : Flag::WhiteEnPassant});
+                            }
                         }
                     }
-                }
-            });},
-            Color::Black => {bitloop!(pawns{
-                let bbmoves = self.bpawn_bbmoves_atk(pawns.blsi().trailing_zeros() as usize) & self.enemy_squares() & checkmask & pinmask & loudmask;
-                if bbmoves & 0xFF000000000000FF > 0 {
-                    bitloop!(bbmoves{
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::KnightPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::BishopPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::RookPromotion});
-                        moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::QueenPromotion});
-                    });
-                } else {
-                    bitloop!(bbmoves{
-                        moves.push(Move { from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag : Flag::NoFlag});
-                    });
-                    let epmove = self.bpawn_epmoves(pawns.blsi().trailing_zeros() as usize) & (checkmask << 8) & pinmask & loudmask;
-                    if epmove > 0 {
-                        if self.verify_ep(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::BlackPawn, flag : Flag::BlackEnPassant}) {
-                            moves.push(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::BlackPawn, flag : Flag::BlackEnPassant});
+                });
+            }
+            Color::Black => {
+                bitloop!(pawns{
+                    let bbmoves = self.bpawn_bbmoves_atk(pawns.blsi().trailing_zeros() as usize) & self.enemy_squares() & checkmask & pinmask & loudmask;
+                    if bbmoves & 0xFF000000000000FF > 0 {
+                        bitloop!(bbmoves{
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::KnightPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::BishopPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::RookPromotion});
+                            moves.push(Move {from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag: Flag::QueenPromotion});
+                        });
+                    } else {
+                        bitloop!(bbmoves{
+                            moves.push(Move { from: pawns.blsi(), to: bbmoves.blsi(), piece_type: PieceType::BlackPawn, flag : Flag::NoFlag});
+                        });
+                        let epmove = self.bpawn_epmoves(pawns.blsi().trailing_zeros() as usize) & (checkmask << 8) & pinmask & loudmask;
+                        if epmove > 0 {
+                            if self.verify_ep(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::BlackPawn, flag : Flag::BlackEnPassant}) {
+                                moves.push(Move { from: pawns.blsi(), to: epmove, piece_type: PieceType::BlackPawn, flag : Flag::BlackEnPassant});
+                            }
                         }
                     }
-                }
-            });},
+                });
+            }
         }
         let bishops = self.get_bitboard(PieceType::WhiteBishop.shiftedby(self.color())) & pinmask;
         bitloop!(bishops{
@@ -275,7 +334,6 @@ impl Board {
             bitloop!(bbmoves{
                 moves.push(Move { from: queens.blsi(), to: bbmoves.blsi(), piece_type: PieceType::WhiteQueen.shiftedby(self.color()), flag: Flag::NoFlag});
             });
-        });        
+        });
     }
-  
 }

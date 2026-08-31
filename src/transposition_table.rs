@@ -6,7 +6,7 @@ pub enum Fail {
     NoFail,
     FailHigh,
     FailLow,
-    None
+    None,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -41,7 +41,12 @@ pub struct TranspositionInfo {
 }
 impl TranspositionInfo {
     pub fn from(t: Transposition) -> Self {
-        Self { depth: t.depth, score: t.score, best_move: t.best_move.long_form(), fail: t.fail }
+        Self {
+            depth: t.depth,
+            score: t.score,
+            best_move: t.best_move.long_form(),
+            fail: t.fail,
+        }
     }
 }
 
@@ -52,7 +57,7 @@ pub struct CompactMove {
 }
 impl CompactMove {
     pub fn long_form(&self) -> Move {
-        Move { 
+        Move {
             from: 1 << ((self.data & 0b111111) as u64),
             to: 1 << (((self.data >> 6) & 0b111111) as u64),
             piece_type: num_to_piece((self.data >> 12) as usize),
@@ -60,25 +65,28 @@ impl CompactMove {
         }
     }
     pub fn from(mv: Move) -> Self {
-        CompactMove { 
+        CompactMove {
             data: mv.from.trailing_zeros() as u16
                 | (mv.to.trailing_zeros() << 6) as u16
                 | ((mv.piece_type as i32) << 12) as u16,
-            flag: mv.flag
+            flag: mv.flag,
         }
     }
     const fn empty() -> Self {
-        CompactMove { data: 0, flag: Flag::NoFlag }
+        CompactMove {
+            data: 0,
+            flag: Flag::NoFlag,
+        }
     }
 }
 
 pub struct TranspositionTable {
-    table: Vec<Transposition>
+    table: Vec<Transposition>,
 }
 impl TranspositionTable {
     pub fn new(size: usize) -> Self {
-        Self { 
-            table: vec![Transposition::empty(); size]
+        Self {
+            table: vec![Transposition::empty(); size],
         }
     }
     pub fn add(&mut self, board: &Board, depth: i8, score: i32, best_move: Move, fail: Fail) {
@@ -89,15 +97,17 @@ impl TranspositionTable {
                 depth,
                 score,
                 fail,
-                best_move: CompactMove::from(best_move)
+                best_move: CompactMove::from(best_move),
             }
         }
     }
     pub fn probe(&self, board: &Board) -> Option<TranspositionInfo> {
         let len = self.table.len() as u64;
-        if len > 0 { 
+        if len > 0 {
             let entry = self.table[(board.zobrist_hash() % len) as usize];
-            if (board.zobrist_hash() >> 32) as u32 == entry.zobrist_leftbits && entry.fail != Fail::None {
+            if (board.zobrist_hash() >> 32) as u32 == entry.zobrist_leftbits
+                && entry.fail != Fail::None
+            {
                 return Some(TranspositionInfo::from(entry));
             }
         }
@@ -119,18 +129,37 @@ pub struct HistoryTable {
 
 impl HistoryTable {
     pub fn probe(&self, ss: &[SearchStackEntry], mv: Move, ply: usize) -> i32 {
-        let pmv = if let Some(m) = ss.get(ply - 1) { m.mv } else { Move::null() };
+        let pmv = if let Some(m) = ss.get(ply - 1) {
+            m.mv
+        } else {
+            Move::null()
+        };
         // let ppmv = if let Some(m) = ssrev.next() { m.mv } else { Move::null() };
 
-        self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize]
-        + if pmv != Move::null() { self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 }
+        self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize]
+            [mv.to.trailing_zeros() as usize]
+            + if pmv != Move::null() {
+                self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize]
+                    [mv.piece_type as usize][mv.to.trailing_zeros() as usize]
+            } else {
+                0
+            }
         // + if ppmv != Move::null() { self.cont_2ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 }
     }
 
     pub fn probe_conthist(&self, ss: &[SearchStackEntry], mv: Move, ply: usize) -> i32 {
-        let pmv = if let Some(m) = ss.get(ply - 1) { m.mv } else { Move::null() };
+        let pmv = if let Some(m) = ss.get(ply - 1) {
+            m.mv
+        } else {
+            Move::null()
+        };
 
-        if pmv != Move::null() { self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 }
+        if pmv != Move::null() {
+            self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize]
+                [mv.piece_type as usize][mv.to.trailing_zeros() as usize]
+        } else {
+            0
+        }
     }
 
     pub fn probe_tactical(&self, mv: Move, pt: usize) -> i32 {
@@ -140,18 +169,32 @@ impl HistoryTable {
     pub fn apply_delta(&mut self, ss: &[SearchStackEntry], mv: Move, delta: i32, ply: usize) {
         let deltac = delta.clamp(-512, 512);
 
-        let pmv = if let Some(m) = ss.get(ply - 1) { m.mv } else { Move::null() };
+        let pmv = if let Some(m) = ss.get(ply - 1) {
+            m.mv
+        } else {
+            Move::null()
+        };
         // let ppmv = if let Some(m) = ssrev.next() { m.mv } else { Move::null() };
 
-        self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] +=
-            deltac - self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] * deltac.abs() / 512;
-    
-        let contsum = if pmv != Move::null() { self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 };
-            // + if ppmv != Move::null() { self.cont_2ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 };
+        self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize]
+            [mv.to.trailing_zeros() as usize] += deltac
+            - self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize]
+                [mv.to.trailing_zeros() as usize]
+                * deltac.abs()
+                / 512;
+
+        let contsum = if pmv != Move::null() {
+            self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize]
+                [mv.piece_type as usize][mv.to.trailing_zeros() as usize]
+        } else {
+            0
+        };
+        // + if ppmv != Move::null() { self.cont_2ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 };
 
         if pmv != Move::null() {
-            self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] +=
-                    deltac - contsum * deltac.abs() / 512;
+            self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize]
+                [mv.piece_type as usize][mv.to.trailing_zeros() as usize] +=
+                deltac - contsum * deltac.abs() / 512;
         }
 
         // if ppmv != Move::null() {
@@ -164,7 +207,11 @@ impl HistoryTable {
         let deltac = delta.clamp(-512, 512);
 
         self.capthist[pt][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] +=
-            deltac - self.capthist[pt][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] * deltac.abs() / 512;
+            deltac
+                - self.capthist[pt][mv.from.trailing_zeros() as usize]
+                    [mv.to.trailing_zeros() as usize]
+                    * deltac.abs()
+                    / 512;
     }
 
     pub fn add_killer(&mut self, mv: Move, ply: i32) {
@@ -178,10 +225,12 @@ impl HistoryTable {
 
 impl Default for HistoryTable {
     fn default() -> Self {
-        Self { data: [[[0; 64]; 64]; 12], killers: [Move::null(); 100], 
-            cont_1ply: unsafe { Box::<_>::new_zeroed().assume_init() }, 
+        Self {
+            data: [[[0; 64]; 64]; 12],
+            killers: [Move::null(); 100],
+            cont_1ply: unsafe { Box::<_>::new_zeroed().assume_init() },
             // cont_2ply: unsafe { Box::<_>::new_zeroed().assume_init() },
-            capthist: unsafe { Box::<_>::new_zeroed().assume_init() } 
+            capthist: unsafe { Box::<_>::new_zeroed().assume_init() },
         }
     }
 }

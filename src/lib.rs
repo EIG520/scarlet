@@ -1,11 +1,11 @@
-pub mod moves;
-pub mod board;
 pub mod basic_moves;
-pub mod utils;
-pub mod uci;
-pub mod search;
+pub mod board;
 pub mod evaluate;
+pub mod moves;
+pub mod search;
 pub mod sort;
-pub mod zobrist;
 pub mod transposition_table;
 pub mod turn;
+pub mod uci;
+pub mod utils;
+pub mod zobrist;
