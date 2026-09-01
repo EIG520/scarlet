@@ -61,6 +61,7 @@ impl Board {
 pub struct SearchStackEntry {
     pub mv: Move,
     pub capt: bool,
+    pub excluded: Move
 }
 
 pub struct Searcher<'a> {
@@ -99,6 +100,7 @@ impl<'a> Searcher<'a> {
             search_stack: [SearchStackEntry {
                 mv: Move::null(),
                 capt: false,
+                excluded: Move::null()
             }; 128],
         }
     }
@@ -121,6 +123,7 @@ impl<'a> Searcher<'a> {
         let incheck = self.board.in_check();
         let pv = alpha != beta - 1;
         let reduce = !pv && !incheck;
+        let excluded = self.search_stack[ply].excluded != Move::null();
 
         if self.board.upcoming_draw() && !root {
             return 0;
@@ -133,8 +136,9 @@ impl<'a> Searcher<'a> {
         }
 
         let mut stat = self.board.gen_eval();
+        let mut maybe_singular = false;
 
-        if let Some(entry) = tt_entry {
+        if !excluded && let Some(entry) = tt_entry {
             let score = entry.score;
 
             if !pv
@@ -151,11 +155,18 @@ impl<'a> Searcher<'a> {
 
             // Use TT eval instead of static evaluation
             stat = score;
+
+            // Detect possible singularity
+            maybe_singular = depth > 7
+                && entry.depth as i32 >= depth - 3
+                && entry.fail != Fail::FailLow
+                && score.abs() < 20000
         } else if depth > 4 {
             depth -= 1;
         }
 
         if ply >= MAX_PLY {
+            println!("too much singuiling");
             return stat;
         }
 
@@ -164,7 +175,7 @@ impl<'a> Searcher<'a> {
             && self.board.state().eval() > self.board.get_nth_prev_boardstate(2).eval();
 
         // Pruning
-        if !root && reduce {
+        if !root && reduce && !excluded {
             // rfp
             if stat - 85 * depth + if improving { 85 } else { 0 } >= beta {
                 return stat;
@@ -176,6 +187,7 @@ impl<'a> Searcher<'a> {
                 self.search_stack[ply as usize] = SearchStackEntry {
                     mv: Move::null(),
                     capt: false,
+                    excluded: Move::null()
                 };
 
                 let eval = -self.search(
@@ -232,6 +244,10 @@ impl<'a> Searcher<'a> {
 
             let (mv, _score) = mvs.moves[i];
 
+            if mv == self.search_stack[ply].excluded {
+                continue;
+            }
+
             let is_capture = mv.to
                 & (self.board.get_bitboard(PieceType::WhitePieces)
                     | self.board.get_bitboard(PieceType::BlackPieces))
@@ -261,17 +277,35 @@ impl<'a> Searcher<'a> {
                     break;
                 }
             }
+            
+            let mut ext = 0;
+
+            if maybe_singular && i == 0 && !root && !excluded {
+                let margin = depth * 2;
+                let sdepth = (depth - 1) / 2;
+
+                self.search_stack[ply].excluded = mv;
+                let sing_score = self.search(sdepth, stat - margin - 1, stat - margin, ply, timer);
+                self.search_stack[ply].excluded = Move::null();
+
+                if sing_score < stat - margin {
+                    // if ext == 0 {
+                    //     println!("sunguilu extEE!!! {} < {} {}", sing_score, stat - margin, stat);
+                    // }
+                    ext = 1;
+                }
+            }
+
 
             self.board.make_move(&mv);
             self.search_stack[ply] = SearchStackEntry {
                 mv,
                 capt: is_capture,
+                excluded: self.search_stack[ply].excluded
             };
 
-            let mut ext = 0;
-
             if self.board.in_check() {
-                ext += 1;
+                ext = 1;
             }
 
             let newdepth = depth - 1 + ext;
@@ -375,6 +409,10 @@ impl<'a> Searcher<'a> {
             }
         }
 
+        if excluded && mvs.pos < 2 {
+            return - 30000;
+        }
+
         if mvs.pos == 0 {
             // in check & no moves = mate
             if incheck {
@@ -383,7 +421,7 @@ impl<'a> Searcher<'a> {
             return 0;
         }
 
-        if self.options.use_tt {
+        if self.options.use_tt && !excluded {
             self.transposition_table.add(
                 self.board,
                 depth as i8,
@@ -492,6 +530,7 @@ impl<'a> Searcher<'a> {
             self.search_stack[ply] = SearchStackEntry {
                 mv,
                 capt: is_capture,
+                excluded: self.search_stack[ply].excluded
             };
 
             let eval = -self.qsearch(-beta, -alpha, ply + 1);
