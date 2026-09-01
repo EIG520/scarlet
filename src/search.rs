@@ -289,9 +289,6 @@ impl<'a> Searcher<'a> {
                 self.search_stack[ply].excluded = Move::null();
 
                 if sing_score < stat - margin {
-                    // if ext == 0 {
-                    //     println!("sunguilu extEE!!! {} < {} {}", sing_score, stat - margin, stat);
-                    // }
                     ext = 1;
                 }
             }
