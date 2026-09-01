@@ -129,7 +129,7 @@ pub struct HistoryTable {
 
 impl HistoryTable {
     pub fn probe(&self, ss: &[SearchStackEntry], mv: Move, ply: usize) -> i32 {
-        let pmv = if let Some(m) = ss.get(ply - 1) {
+        let pmv = if ply > 0 && let Some(m) = ss.get(ply - 1) {
             m.mv
         } else {
             Move::null()
@@ -169,7 +169,7 @@ impl HistoryTable {
     pub fn apply_delta(&mut self, ss: &[SearchStackEntry], mv: Move, delta: i32, ply: usize) {
         let deltac = delta.clamp(-512, 512);
 
-        let pmv = if let Some(m) = ss.get(ply - 1) {
+        let pmv = if ply > 0 && let Some(m) = ss.get(ply - 1) {
             m.mv
         } else {
             Move::null()
