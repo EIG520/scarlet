@@ -101,7 +101,7 @@ impl<'a> Searcher<'a> {
                 mv: Move::null(),
                 capt: false,
                 excluded: Move::null()
-            }; 128],
+            }; MAX_PLY],
         }
     }
 
@@ -123,7 +123,7 @@ impl<'a> Searcher<'a> {
         let incheck = self.board.in_check();
         let pv = alpha != beta - 1;
         let reduce = !pv && !incheck;
-        let excluded = self.search_stack[ply].excluded != Move::null();
+        let excluded = if ply < MAX_PLY { self.search_stack[ply].excluded != Move::null() } else { false };
 
         if self.board.upcoming_draw() && !root {
             return 0;
@@ -166,7 +166,6 @@ impl<'a> Searcher<'a> {
         }
 
         if ply >= MAX_PLY {
-            println!("too much singuiling");
             return stat;
         }
 
