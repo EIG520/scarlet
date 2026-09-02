@@ -289,6 +289,8 @@ impl<'a> Searcher<'a> {
 
                 if sing_score < stat - margin {
                     ext = 1;
+                } else if sing_score >= beta && sing_score.abs() < 20000 {
+                    return (sing_score + beta) / 2
                 }
             }
 
