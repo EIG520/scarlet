@@ -92,7 +92,7 @@ const SCALE: i32 = 400;
 const QA: i16 = 255;
 const QB: i16 = 64;
 
-static NNUE: Network = unsafe { std::mem::transmute(*include_bytes!(r"net_witch_512_2.bin")) };
+static NNUE: Network = unsafe { std::mem::transmute(*include_bytes!(r"net_witch_512_4.bin")) };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(C)]

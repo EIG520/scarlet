@@ -40,7 +40,7 @@ pub fn main() {
         });
 
     let schedule = TrainingSchedule {
-        net_id: "witch_512_2".to_string(),
+        net_id: "witch_512_3".to_string(),
         eval_scale: SCALE as f32,
         steps: TrainingSteps {
             batch_size: 16_384,
@@ -48,11 +48,11 @@ pub fn main() {
             start_superbatch: 1,
             end_superbatch: 400,
         },
-        wdl_scheduler: wdl::ConstantWDL { value: 0.3 },
-        lr_scheduler: lr::StepLR {
-            start: 0.001,
-            gamma: 0.1,
-            step: 18,
+        wdl_scheduler: wdl::LinearWDL { start: 0.2, end: 0.5 },
+        lr_scheduler: lr::CosineDecayLR {
+            initial_lr: 0.001,
+            final_lr: 0.001 * 0.3f32.powi(5),
+            final_superbatch: 400,
         },
         save_rate: 10,
     };
