@@ -623,9 +623,9 @@ impl<'a> Searcher<'a> {
         None
     }
 
-    pub fn search_for_ms(&mut self, ms: u128) -> Move {
+    pub fn search_for_ms(&mut self, ms_soft: u128, ms_hard: u128) -> Move {
         self.history_table = HistoryTable::default();
-        self.search_ms = ms;
+        self.search_ms = ms_hard;
         self.root_best_eval = -30000;
         self.search_best_eval = -30000;
         self.nodes = 0;
@@ -635,7 +635,7 @@ impl<'a> Searcher<'a> {
         let mut depth = 0;
 
         // Go deeper and deeper until either mate is found or time is up
-        while timer.elapsed().as_millis() < self.search_ms / 13 && self.search_best_eval < 20000 {
+        while timer.elapsed().as_millis() < ms_soft && self.search_best_eval < 20000 {
             if depth == 100 {
                 break;
             }

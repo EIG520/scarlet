@@ -16,6 +16,11 @@ pub struct UciHandler {
     board: Board,
     transposition_table: TranspositionTable,
     options: StoredOptions,
+
+    winc: u128,
+    binc: u128,
+    wtime: u128,
+    btime: u128
 }
 
 impl Default for UciHandler {
@@ -30,6 +35,10 @@ impl UciHandler {
             board: Board::new(),
             transposition_table: TranspositionTable::new(0),
             options: StoredOptions { use_tt: true },
+            winc: 0,
+            binc: 0,
+            wtime: 0,
+            btime: 0
         };
         se.transposition_table
             .resize(16000000 / std::mem::size_of::<Transposition>());
@@ -186,34 +195,32 @@ impl UciHandler {
             match next {
                 Some("perft") => return self.handle_perft(command),
                 Some("depth") => return self.handle_depth(command),
-                Some(name)
-                    if name
-                        == match self.board.color() {
-                            Color::White => "wtime",
-                            Color::Black => "btime",
-                        } =>
-                {
-                    return self.handle_time(command);
-                }
+                Some("wtime") => self.wtime = command.next().unwrap().parse::<u128>().unwrap(),
+                Some("btime") => self.btime = command.next().unwrap().parse::<u128>().unwrap(),
+                Some("winc") => self.winc = command.next().unwrap().parse::<u128>().unwrap(),
+                Some("binc") => self.binc = command.next().unwrap().parse::<u128>().unwrap(),
                 _ => {}
             }
 
             next = command.next();
         }
+        let col = self.board.color();
+
+        let mut searcher: Searcher =
+            Searcher::new(&mut self.board, &mut self.transposition_table, self.options);
+
+        let (time,inc) = match col {
+            Color::White => {
+                (self.wtime, self.winc)
+            }
+            Color::Black => {
+                (self.btime, self.binc)
+            }
+        };
+
+        searcher.search_for_ms(time / 26 + inc / 2, time / 2);
 
         Ok(())
-    }
-
-    pub fn handle_time(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
-        match command.next() {
-            Some(x) if x.parse::<u128>().is_ok() => {
-                let mut searcher: Searcher =
-                    Searcher::new(&mut self.board, &mut self.transposition_table, self.options);
-                searcher.search_for_ms(x.parse::<u128>().unwrap() / 2);
-                Ok(())
-            }
-            _ => Err(()),
-        }
     }
 
     pub fn handle_depth(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
