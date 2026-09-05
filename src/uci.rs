@@ -1,10 +1,8 @@
 use std::error::Error;
 use std::str::SplitWhitespace;
 
-pub use crate::board::*;
 pub use crate::search::*;
 pub use crate::transposition_table::*;
-pub use crate::utils::*;
 
 use strum::*;
 use strum_macros::*;
@@ -20,7 +18,7 @@ pub struct UciHandler {
     winc: u128,
     binc: u128,
     wtime: u128,
-    btime: u128
+    btime: u128,
 }
 
 impl Default for UciHandler {
@@ -38,7 +36,7 @@ impl UciHandler {
             winc: 0,
             binc: 0,
             wtime: 0,
-            btime: 0
+            btime: 0,
         };
         se.transposition_table
             .resize(16000000 / std::mem::size_of::<Transposition>());
@@ -209,13 +207,9 @@ impl UciHandler {
         let mut searcher: Searcher =
             Searcher::new(&mut self.board, &mut self.transposition_table, self.options);
 
-        let (time,inc) = match col {
-            Color::White => {
-                (self.wtime, self.winc)
-            }
-            Color::Black => {
-                (self.btime, self.binc)
-            }
+        let (time, inc) = match col {
+            Color::White => (self.wtime, self.winc),
+            Color::Black => (self.btime, self.binc),
         };
 
         searcher.search_for_ms(time / 26 + inc / 2, time / 2);

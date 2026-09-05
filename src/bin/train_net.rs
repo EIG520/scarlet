@@ -48,7 +48,10 @@ pub fn main() {
             start_superbatch: 1,
             end_superbatch: 400,
         },
-        wdl_scheduler: wdl::LinearWDL { start: 0.2, end: 0.5 },
+        wdl_scheduler: wdl::LinearWDL {
+            start: 0.2,
+            end: 0.5,
+        },
         lr_scheduler: lr::CosineDecayLR {
             initial_lr: 0.001,
             final_lr: 0.001 * 0.3f32.powi(5),

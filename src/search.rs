@@ -61,7 +61,7 @@ impl Board {
 pub struct SearchStackEntry {
     pub mv: Move,
     pub capt: bool,
-    pub excluded: Move
+    pub excluded: Move,
 }
 
 pub struct Searcher<'a> {
@@ -100,7 +100,7 @@ impl<'a> Searcher<'a> {
             search_stack: [SearchStackEntry {
                 mv: Move::null(),
                 capt: false,
-                excluded: Move::null()
+                excluded: Move::null(),
             }; MAX_PLY],
         }
     }
@@ -123,7 +123,11 @@ impl<'a> Searcher<'a> {
         let incheck = self.board.in_check();
         let pv = alpha != beta - 1;
         let reduce = !pv && !incheck;
-        let excluded = if ply < MAX_PLY { self.search_stack[ply].excluded != Move::null() } else { false };
+        let excluded = if ply < MAX_PLY {
+            self.search_stack[ply].excluded != Move::null()
+        } else {
+            false
+        };
 
         if self.board.upcoming_draw() && !root {
             return 0;
@@ -186,7 +190,7 @@ impl<'a> Searcher<'a> {
                 self.search_stack[ply as usize] = SearchStackEntry {
                     mv: Move::null(),
                     capt: false,
-                    excluded: Move::null()
+                    excluded: Move::null(),
                 };
 
                 let eval = -self.search(
@@ -276,7 +280,7 @@ impl<'a> Searcher<'a> {
                     break;
                 }
             }
-            
+
             let mut ext = 0;
 
             if maybe_singular && i == 0 && !root && !excluded {
@@ -290,16 +294,15 @@ impl<'a> Searcher<'a> {
                 if sing_score < stat - margin {
                     ext = 1;
                 } else if sing_score >= beta && sing_score.abs() < 20000 {
-                    return (sing_score + beta) / 2
+                    return (sing_score + beta) / 2;
                 }
             }
-
 
             self.board.make_move(&mv);
             self.search_stack[ply] = SearchStackEntry {
                 mv,
                 capt: is_capture,
-                excluded: self.search_stack[ply].excluded
+                excluded: self.search_stack[ply].excluded,
             };
 
             if self.board.in_check() {
@@ -408,7 +411,7 @@ impl<'a> Searcher<'a> {
         }
 
         if excluded && mvs.pos < 2 {
-            return - 30000;
+            return -30000;
         }
 
         if mvs.pos == 0 {
@@ -528,7 +531,7 @@ impl<'a> Searcher<'a> {
             self.search_stack[ply] = SearchStackEntry {
                 mv,
                 capt: is_capture,
-                excluded: self.search_stack[ply].excluded
+                excluded: self.search_stack[ply].excluded,
             };
 
             let eval = -self.qsearch(-beta, -alpha, ply + 1);
