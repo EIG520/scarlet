@@ -5,6 +5,7 @@ pub mod moves;
 pub mod search;
 pub mod sort;
 pub mod transposition_table;
+pub mod tunebox;
 pub mod turn;
 pub mod uci;
 pub mod utils;

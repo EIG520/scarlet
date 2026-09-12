@@ -1,0 +1,12 @@
+[package]
+name = "tune_macro_derive"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "1.0.47"
+syn = { version = "3.0.5", features = ["full", "extra-traits"] } 
+tune_macro = { version = "0.1.0", path = "../tune_macro" }

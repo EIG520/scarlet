@@ -13,6 +13,7 @@ use rand::random_range;
 use scarlet::{
     board::Board,
     moves::{Flag, Move, MoveList},
+    tunebox::TuneBox,
     uci::{Searcher, StoredOptions, TranspositionTable},
 };
 use viriformat::chess::types;
@@ -119,8 +120,14 @@ impl DataGenner {
 
     pub fn play_scarlet_move(&mut self, softnodes: u128) {
         let mut tt = TranspositionTable::new(softnodes.min(1000000) as usize);
-        let mut searcher =
-            Searcher::new(&mut self.scarboard, &mut tt, StoredOptions { use_tt: true });
+        let mut searcher = Searcher::new(
+            &mut self.scarboard,
+            &mut tt,
+            StoredOptions {
+                use_tt: true,
+                t: TuneBox::default(),
+            },
+        );
         searcher.set_search_ms(10);
 
         let timer = Instant::now();

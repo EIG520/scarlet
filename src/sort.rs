@@ -1,5 +1,5 @@
 pub use crate::board::*;
-use crate::uci::{HistoryTable, SearchStackEntry};
+use crate::{tunebox::TuneBox, uci::{HistoryTable, SearchStackEntry}};
 pub use partial_sort;
 
 impl Board {
@@ -63,11 +63,12 @@ impl Board {
         mvs: &mut MoveList,
         best_move: Move,
         ss: &[SearchStackEntry],
+        t: &TuneBox,
         hist: &HistoryTable,
         ply: usize,
     ) {
         for i in 0..mvs.pos {
-            mvs.moves[i].1 = self.value_see(mvs.moves[i].0, best_move, ss, hist, ply);
+            mvs.moves[i].1 = self.value_see(mvs.moves[i].0, best_move, ss, t, hist, ply);
         }
     }
     pub fn value_see(
@@ -75,6 +76,7 @@ impl Board {
         mv: Move,
         bm: Move,
         ss: &[SearchStackEntry],
+        t: & TuneBox,
         hist: &HistoryTable,
         ply: usize,
     ) -> i32 {
@@ -88,7 +90,7 @@ impl Board {
         if posq != 0 {
             return posq * 10000000
                 - mv.piece_type as i32
-                - if !self.see_threshold(mv, 0) {
+                - if !self.see_threshold(mv, t.see_sort_margin) {
                     1000000000
                 } else {
                     0

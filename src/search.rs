@@ -1,5 +1,5 @@
 pub use crate::uci::*;
-use std::time::Instant;
+use std::{rc::Rc, time::Instant};
 
 const MAX_PLY: usize = 128;
 
@@ -74,7 +74,7 @@ pub struct Searcher<'a> {
     nodes: u128,
     transposition_table: &'a mut TranspositionTable,
     history_table: HistoryTable,
-    options: StoredOptions,
+    options: Rc<StoredOptions>,
 
     search_stack: [SearchStackEntry; MAX_PLY],
 }
@@ -95,7 +95,7 @@ impl<'a> Searcher<'a> {
             nodes: 0,
             transposition_table,
             history_table: HistoryTable::default(),
-            options,
+            options: Rc::from(options),
 
             search_stack: [SearchStackEntry {
                 mv: Move::null(),
@@ -128,6 +128,7 @@ impl<'a> Searcher<'a> {
         } else {
             false
         };
+        let t = self.options.t;
 
         if self.board.upcoming_draw() && !root {
             return 0;
@@ -180,7 +181,7 @@ impl<'a> Searcher<'a> {
         // Pruning
         if !root && reduce && !excluded {
             // rfp
-            if stat - 85 * depth + if improving { 85 } else { 0 } >= beta {
+            if stat - t.rfp_depthmul * depth + if improving { t.rfp_improving } else { 0 } >= beta {
                 return stat;
             }
 
@@ -194,7 +195,7 @@ impl<'a> Searcher<'a> {
                 };
 
                 let eval = -self.search(
-                    (depth * 100 + beta - stat) / 200 - 1,
+                    (depth * t.nmp_dmul + beta - stat) / t.nmp_ddiv - 1,
                     -beta,
                     1 - beta,
                     ply + 1,
@@ -217,6 +218,7 @@ impl<'a> Searcher<'a> {
                 &mut mvs,
                 entry.best_move,
                 &self.search_stack,
+                &t,
                 &self.history_table,
                 ply,
             );
@@ -225,6 +227,7 @@ impl<'a> Searcher<'a> {
                 &mut mvs,
                 Move::null(),
                 &self.search_stack,
+                &t,
                 &self.history_table,
                 ply,
             );
@@ -273,7 +276,7 @@ impl<'a> Searcher<'a> {
                 // futility pruning
                 if !is_capture
                     && !is_qpromo
-                    && stat + 256 + 128 * depth < alpha
+                    && stat + t.ffp_c + t.ffp_dmul * depth < alpha
                     && alpha.abs() < 2000
                     && depth <= 6
                 {
@@ -284,8 +287,8 @@ impl<'a> Searcher<'a> {
             let mut ext = 0;
 
             if maybe_singular && i == 0 && !root && !excluded {
-                let margin = depth * 2;
-                let sdepth = (depth - 1) / 2;
+                let margin = depth * t.singmarg_dmul / 1024;
+                let sdepth = (depth - 1) * t.singd_dmul / 1024;
 
                 self.search_stack[ply].excluded = mv;
                 let sing_score = self.search(sdepth, stat - margin - 1, stat - margin, ply, timer);
@@ -316,8 +319,10 @@ impl<'a> Searcher<'a> {
             let ireq = if pv { 6 } else { 2 };
 
             if i > ireq && depth >= 2 && (!is_capture && !is_qpromo) {
-                let reduction = (1.0 + (depth as f32).ln() * (i as f32).ln() / 2.0
-                    - self.history_table.probe(&self.search_stack, mv, ply) as f32 / 200.0)
+                let reduction = (if pv { t.lmr_c_pv } else { t.lmr_c } as f32 / 1024.0
+                    + (depth as f32).ln() * (i as f32).ln() * if pv { t.lmr_num_pv } else { t.lmr_num } as f32 / 1024.0
+                    - self.history_table.probe(&self.search_stack, mv, ply) as f32
+                        / if pv { t.histred_div_pv } else { t.histred_div } as f32)
                     .floor() as i32;
 
                 let reduced = (newdepth - reduction).clamp(0, depth - 1);
@@ -357,7 +362,7 @@ impl<'a> Searcher<'a> {
                     if !is_capture {
                         self.history_table.add_killer(mv, ply as i32);
                         self.history_table
-                            .apply_delta(&self.search_stack, mv, depth * depth, ply);
+                            .apply_delta(&self.search_stack, mv, depth * depth * if pv { t.hist_inc_pv } else { t.hist_inc } / 1024, ply);
 
                         for j in 0..i {
                             let mv2 = mvs.moves[j].0;
@@ -370,14 +375,14 @@ impl<'a> Searcher<'a> {
                                 self.history_table.apply_delta(
                                     &self.search_stack,
                                     mv2,
-                                    -depth * depth,
+                                    -depth * depth * if pv { t.hist_dec_pv } else { t.hist_dec } / 1024,
                                     ply,
                                 );
                             } else {
                                 self.history_table.apply_delta_tactical(
                                     mv2,
                                     self.board.piece_on_sq(mv2.to.trailing_zeros() as usize),
-                                    -depth * depth,
+                                    -depth * depth * if pv { t.hist_dec_pv_quitact } else { t.hist_dec_quitact } / 1024,
                                 );
                             }
                         }
@@ -385,7 +390,7 @@ impl<'a> Searcher<'a> {
                         self.history_table.apply_delta_tactical(
                             mv,
                             self.board.piece_on_sq(mv.to.trailing_zeros() as usize),
-                            depth * depth,
+                            depth * depth * if pv { t.hist_inc_pv_tact } else { t.hist_inc_tact } / 1024,
                         );
 
                         for j in 0..i {
@@ -399,7 +404,7 @@ impl<'a> Searcher<'a> {
                                 self.history_table.apply_delta_tactical(
                                     mv2,
                                     self.board.piece_on_sq(mv2.to.trailing_zeros() as usize),
-                                    -depth * depth,
+                                    -depth * depth * if pv { t.hist_dec_pv_ttact } else { t.hist_dec_ttact } / 1024,
                                 );
                             }
                         }
@@ -452,6 +457,7 @@ impl<'a> Searcher<'a> {
 
         // let incheck = self.board.in_check();
         // let pv = alpha != beta - 1;
+        let t = self.options.t;
 
         if self.board.upcoming_draw() {
             return 0;
@@ -518,7 +524,7 @@ impl<'a> Searcher<'a> {
                 break;
             }
 
-            if !self.board.see_threshold(mv, 0) {
+            if !self.board.see_threshold(mv, t.see_prune_margin) {
                 continue;
             }
 
@@ -626,9 +632,9 @@ impl<'a> Searcher<'a> {
         None
     }
 
-    pub fn search_for_ms(&mut self, ms_soft: u128, ms_hard: u128) -> Move {
+    pub fn search_for_ms(&mut self, ms_soft: u128, ms_hard: u128, nodes: Option<u128>) -> Move {
         self.history_table = HistoryTable::default();
-        self.search_ms = ms_hard;
+        self.search_ms = if nodes.is_some() { 1000 } else { ms_hard };
         self.root_best_eval = -30000;
         self.search_best_eval = -30000;
         self.nodes = 0;
@@ -638,7 +644,10 @@ impl<'a> Searcher<'a> {
         let mut depth = 0;
 
         // Go deeper and deeper until either mate is found or time is up
-        while timer.elapsed().as_millis() < ms_soft && self.search_best_eval < 20000 {
+        while (timer.elapsed().as_millis() < ms_soft || nodes.is_some())
+            && self.search_best_eval < 20000
+            && (nodes.is_none() || self.nodes < nodes.unwrap())
+        {
             if depth == 100 {
                 break;
             }

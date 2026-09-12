@@ -3,9 +3,11 @@ use std::str::SplitWhitespace;
 
 pub use crate::search::*;
 pub use crate::transposition_table::*;
+use crate::tunebox::TuneBox;
 
 use strum::*;
 use strum_macros::*;
+use tune_macro::TuneContainer;
 
 use std::fs::File;
 use std::io::{self, BufRead};
@@ -19,6 +21,7 @@ pub struct UciHandler {
     binc: u128,
     wtime: u128,
     btime: u128,
+    nodes: u128,
 }
 
 impl Default for UciHandler {
@@ -32,11 +35,15 @@ impl UciHandler {
         let mut se = Self {
             board: Board::new(),
             transposition_table: TranspositionTable::new(0),
-            options: StoredOptions { use_tt: true },
+            options: StoredOptions {
+                use_tt: true,
+                t: TuneBox::default(),
+            },
             winc: 0,
             binc: 0,
             wtime: 0,
             btime: 0,
+            nodes: 0,
         };
         se.transposition_table
             .resize(16000000 / std::mem::size_of::<Transposition>());
@@ -74,6 +81,10 @@ impl UciHandler {
             Some("go") => self.handle_go(command),
             Some("position") => self.handle_position(command),
             Some("setoption") => self.handle_option(command),
+            Some("wf_config") => {
+                self.options.t.list_wf_json_config();
+                Ok(())
+            }
 
             Some("d") => {
                 print_bb(
@@ -141,6 +152,18 @@ impl UciHandler {
                     _ => Ok(()),
                 }
             }
+            Some(x) if x.to_lowercase().starts_with("tune_") => {
+                command.next();
+
+                match command.next() {
+                    Some(y) if y.parse::<i32>().is_ok() => {
+                        *self.options.t.get_refmut(x) = y.parse::<i32>().unwrap();
+
+                        Ok(())
+                    }
+                    _ => Ok(()),
+                }
+            }
             _ => Ok(()),
         }
     }
@@ -169,6 +192,8 @@ impl UciHandler {
             println!();
         }
 
+        self.options.t.list_options();
+
         println!("uciok");
     }
 
@@ -188,6 +213,7 @@ impl UciHandler {
 
     pub fn handle_go(&mut self, command: &mut SplitWhitespace<'_>) -> Result<(), ()> {
         let mut next = command.next();
+        self.nodes = 0;
 
         while next.is_some() {
             match next {
@@ -197,6 +223,7 @@ impl UciHandler {
                 Some("btime") => self.btime = command.next().unwrap().parse::<u128>().unwrap(),
                 Some("winc") => self.winc = command.next().unwrap().parse::<u128>().unwrap(),
                 Some("binc") => self.binc = command.next().unwrap().parse::<u128>().unwrap(),
+                Some("nodes") => self.nodes = command.next().unwrap().parse::<u128>().unwrap(),
                 _ => {}
             }
 
@@ -212,7 +239,16 @@ impl UciHandler {
             Color::Black => (self.btime, self.binc),
         };
 
-        searcher.search_for_ms(time / 26 + inc / 2, time / 2);
+        searcher.search_for_ms(
+            time * self.options.t.time_num.max(0) as u128 / 1024
+                + inc * self.options.t.inc_num.max(0) as u128 / 1024,
+            time / 2,
+            if self.nodes == 0 {
+                None
+            } else {
+                Some(self.nodes)
+            },
+        );
 
         Ok(())
     }
@@ -582,4 +618,5 @@ enum EngineOption {
 #[derive(Clone, Copy)]
 pub struct StoredOptions {
     pub use_tt: bool,
+    pub t: TuneBox,
 }
