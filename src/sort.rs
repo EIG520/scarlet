@@ -1,5 +1,8 @@
 pub use crate::board::*;
-use crate::{tunebox::TuneBox, uci::{HistoryTable, SearchStackEntry}};
+use crate::{
+    tunebox::TuneBox,
+    uci::{HistoryTable, SearchStackEntry},
+};
 pub use partial_sort;
 
 impl Board {
@@ -76,7 +79,7 @@ impl Board {
         mv: Move,
         bm: Move,
         ss: &[SearchStackEntry],
-        t: & TuneBox,
+        t: &TuneBox,
         hist: &HistoryTable,
         ply: usize,
     ) -> i32 {

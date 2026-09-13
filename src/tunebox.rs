@@ -58,5 +58,5 @@ pub struct TuneBox {
     #[Tunable(default = 31, min = -999999, max = 999999, step = 20)]
     pub see_prune_margin: i32,
     #[Tunable(default = -19, min = -999999, max = 999999, step = 20)]
-    pub see_sort_margin: i32
+    pub see_sort_margin: i32,
 }

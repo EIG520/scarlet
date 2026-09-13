@@ -320,7 +320,10 @@ impl<'a> Searcher<'a> {
 
             if i > ireq && depth >= 2 && (!is_capture && !is_qpromo) {
                 let reduction = (if pv { t.lmr_c_pv } else { t.lmr_c } as f32 / 1024.0
-                    + (depth as f32).ln() * (i as f32).ln() * if pv { t.lmr_num_pv } else { t.lmr_num } as f32 / 1024.0
+                    + (depth as f32).ln()
+                        * (i as f32).ln()
+                        * if pv { t.lmr_num_pv } else { t.lmr_num } as f32
+                        / 1024.0
                     - self.history_table.probe(&self.search_stack, mv, ply) as f32
                         / if pv { t.histred_div_pv } else { t.histred_div } as f32)
                     .floor() as i32;
@@ -361,8 +364,12 @@ impl<'a> Searcher<'a> {
 
                     if !is_capture {
                         self.history_table.add_killer(mv, ply as i32);
-                        self.history_table
-                            .apply_delta(&self.search_stack, mv, depth * depth * if pv { t.hist_inc_pv } else { t.hist_inc } / 1024, ply);
+                        self.history_table.apply_delta(
+                            &self.search_stack,
+                            mv,
+                            depth * depth * if pv { t.hist_inc_pv } else { t.hist_inc } / 1024,
+                            ply,
+                        );
 
                         for j in 0..i {
                             let mv2 = mvs.moves[j].0;
@@ -375,14 +382,22 @@ impl<'a> Searcher<'a> {
                                 self.history_table.apply_delta(
                                     &self.search_stack,
                                     mv2,
-                                    -depth * depth * if pv { t.hist_dec_pv } else { t.hist_dec } / 1024,
+                                    -depth * depth * if pv { t.hist_dec_pv } else { t.hist_dec }
+                                        / 1024,
                                     ply,
                                 );
                             } else {
                                 self.history_table.apply_delta_tactical(
                                     mv2,
                                     self.board.piece_on_sq(mv2.to.trailing_zeros() as usize),
-                                    -depth * depth * if pv { t.hist_dec_pv_quitact } else { t.hist_dec_quitact } / 1024,
+                                    -depth
+                                        * depth
+                                        * if pv {
+                                            t.hist_dec_pv_quitact
+                                        } else {
+                                            t.hist_dec_quitact
+                                        }
+                                        / 1024,
                                 );
                             }
                         }
@@ -390,7 +405,14 @@ impl<'a> Searcher<'a> {
                         self.history_table.apply_delta_tactical(
                             mv,
                             self.board.piece_on_sq(mv.to.trailing_zeros() as usize),
-                            depth * depth * if pv { t.hist_inc_pv_tact } else { t.hist_inc_tact } / 1024,
+                            depth
+                                * depth
+                                * if pv {
+                                    t.hist_inc_pv_tact
+                                } else {
+                                    t.hist_inc_tact
+                                }
+                                / 1024,
                         );
 
                         for j in 0..i {
@@ -404,7 +426,14 @@ impl<'a> Searcher<'a> {
                                 self.history_table.apply_delta_tactical(
                                     mv2,
                                     self.board.piece_on_sq(mv2.to.trailing_zeros() as usize),
-                                    -depth * depth * if pv { t.hist_dec_pv_ttact } else { t.hist_dec_ttact } / 1024,
+                                    -depth
+                                        * depth
+                                        * if pv {
+                                            t.hist_dec_pv_ttact
+                                        } else {
+                                            t.hist_dec_ttact
+                                        }
+                                        / 1024,
                                 );
                             }
                         }

@@ -124,11 +124,17 @@ pub struct HistoryTable {
 
     capthist: Box<[[[i32; 64]; 64]; 12]>,
     cont_1ply: Box<[[[[i32; 64]; 12]; 64]; 12]>,
-    // cont_2ply: Box<[[[[i32; 64]; 12]; 64]; 12]>
+    // cont_2ply: Box<[[[[i32; 64]; 12]; 64]; 12]>,
 }
 
 impl HistoryTable {
     pub fn probe(&self, ss: &[SearchStackEntry], mv: Move, ply: usize) -> i32 {
+        self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize]
+            [mv.to.trailing_zeros() as usize]
+            + self.probe_conthist(ss, mv, ply)
+    }
+
+    pub fn probe_conthist(&self, ss: &[SearchStackEntry], mv: Move, ply: usize) -> i32 {
         let pmv = if ply > 0
             && let Some(m) = ss.get(ply - 1)
         {
@@ -136,32 +142,26 @@ impl HistoryTable {
         } else {
             Move::null()
         };
-        // let ppmv = if let Some(m) = ssrev.next() { m.mv } else { Move::null() };
 
-        self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize]
-            [mv.to.trailing_zeros() as usize]
-            + if pmv != Move::null() {
-                self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize]
-                    [mv.piece_type as usize][mv.to.trailing_zeros() as usize]
-            } else {
-                0
-            }
-        // + if ppmv != Move::null() { self.cont_2ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 }
-    }
+        // let ppmv = if ply > 0
+        //     && let Some(m) = ss.get(ply - 2)
+        // {
+        //     m.mv
+        // } else {
+        //     Move::null()
+        // };
 
-    pub fn probe_conthist(&self, ss: &[SearchStackEntry], mv: Move, ply: usize) -> i32 {
-        let pmv = if let Some(m) = ss.get(ply - 1) {
-            m.mv
-        } else {
-            Move::null()
-        };
-
-        if pmv != Move::null() {
+        0 + if pmv != Move::null() {
             self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize]
                 [mv.piece_type as usize][mv.to.trailing_zeros() as usize]
         } else {
             0
-        }
+        } // + if ppmv != Move::null() {
+        //     self.cont_2ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize]
+        //         [mv.piece_type as usize][mv.to.trailing_zeros() as usize]
+        // } else {
+        //     0
+        // }
     }
 
     pub fn probe_tactical(&self, mv: Move, pt: usize) -> i32 {
