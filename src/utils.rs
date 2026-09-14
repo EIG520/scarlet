@@ -78,10 +78,5 @@ pub fn square_to_chess(square: usize) -> String {
 
 // my silly move rep into a2a4 or whatever
 pub fn move_to_chess(mv: Move) -> String {
-    format!(
-        "{}{}{}",
-        bbsquare_to_chess(mv.from),
-        bbsquare_to_chess(mv.to),
-        flag_to_piece(mv.flag)
-    )
+    format!("{}{}{}", bbsquare_to_chess(mv.from), bbsquare_to_chess(mv.to), flag_to_piece(mv.flag))
 }

@@ -1072,8 +1072,7 @@ const fn gen_rbr() -> [u64; 256] {
     let mut cur: [u64; 256] = [0; 256];
     let mut i: u64 = 0;
     while i < 256 {
-        cur[i as usize] =
-            (i.reverse_bits() ^ i.reverse_bits().wrapping_sub(1)).reverse_bits() as u64;
+        cur[i as usize] = (i.reverse_bits() ^ i.reverse_bits().wrapping_sub(1)).reverse_bits() as u64;
         i += 1;
     }
     cur
@@ -1139,9 +1138,8 @@ impl Board {
     // Sliding Pieces
     pub fn rook_bbmoves_atk(&self, from: usize) -> u64 {
         let king: u64 = self.get_bitboard(PieceType::WhiteKing.shiftedby(self.color().swapped()));
-        let main_bb: u64 = (self.get_bitboard(PieceType::WhitePieces)
-            | self.get_bitboard(PieceType::BlackPieces))
-            ^ king;
+        let main_bb: u64 =
+            (self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces)) ^ king;
 
         let mut right: u64 = main_bb;
         // Bitintr pext is slow
@@ -1167,9 +1165,8 @@ impl Board {
     }
     pub fn bishop_bbmoves_atk(&self, from: usize) -> u64 {
         let king: u64 = self.get_bitboard(PieceType::WhiteKing.shiftedby(self.color().swapped()));
-        let main_bb: u64 = (self.get_bitboard(PieceType::WhitePieces)
-            | self.get_bitboard(PieceType::BlackPieces))
-            ^ king;
+        let main_bb: u64 =
+            (self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces)) ^ king;
 
         let mut right: u64 = main_bb;
         unsafe {
@@ -1231,8 +1228,7 @@ impl Board {
 
     // Sliding Pieces
     pub fn rook_bbmoves(&mut self, from: usize) -> u64 {
-        let main_bb: u64 =
-            self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces);
+        let main_bb: u64 = self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces);
         // print_bb(main_bb);
 
         let mut right: u64 = main_bb;
@@ -1258,8 +1254,7 @@ impl Board {
         (right | up | left | down) & self.open_squares()
     }
     pub fn bishop_bbmoves(&mut self, from: usize) -> u64 {
-        let main_bb: u64 =
-            self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces);
+        let main_bb: u64 = self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces);
 
         let mut right: u64 = main_bb;
         unsafe {
@@ -1292,12 +1287,9 @@ impl Board {
     }
 
     pub fn verify_ep(&mut self, mv: Move) -> bool {
-        let from = self
-            .get_bitboard(PieceType::WhiteKing.shiftedby(self.color()))
-            .trailing_zeros() as usize;
+        let from = self.get_bitboard(PieceType::WhiteKing.shiftedby(self.color())).trailing_zeros() as usize;
 
-        let main_bb: u64 = (self.get_bitboard(PieceType::WhitePieces)
-            | self.get_bitboard(PieceType::BlackPieces))
+        let main_bb: u64 = (self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces))
             ^ (mv.from | self.shift_vert_by_color(mv.to));
         let rooks: u64 = self.get_bitboard(PieceType::WhiteRook.shiftedby(self.color().swapped()))
             | self.get_bitboard(PieceType::WhiteQueen.shiftedby(self.color().swapped()));
@@ -1325,12 +1317,9 @@ impl Board {
     }
 
     pub fn rook_pinmask(&mut self) -> u64 {
-        let from = self
-            .get_bitboard(PieceType::WhiteKing.shiftedby(self.color()))
-            .trailing_zeros() as usize;
+        let from = self.get_bitboard(PieceType::WhiteKing.shiftedby(self.color())).trailing_zeros() as usize;
 
-        let main_bb: u64 =
-            self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces);
+        let main_bb: u64 = self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces);
         let rooks: u64 = self.get_bitboard(PieceType::WhiteRook.shiftedby(self.color().swapped()))
             | self.get_bitboard(PieceType::WhiteQueen.shiftedby(self.color().swapped()));
 
@@ -1370,13 +1359,9 @@ impl Board {
         right | up | left | down
     }
     pub fn bishop_pinmask(&mut self) -> u64 {
-        let from = self
-            .get_bitboard(PieceType::WhiteKing.shiftedby(self.color()))
-            .trailing_zeros() as usize;
-        let main_bb: u64 =
-            self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces);
-        let bishops: u64 = self
-            .get_bitboard(PieceType::WhiteBishop.shiftedby(self.color().swapped()))
+        let from = self.get_bitboard(PieceType::WhiteKing.shiftedby(self.color())).trailing_zeros() as usize;
+        let main_bb: u64 = self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces);
+        let bishops: u64 = self.get_bitboard(PieceType::WhiteBishop.shiftedby(self.color().swapped()))
             | self.get_bitboard(PieceType::WhiteQueen.shiftedby(self.color().swapped()));
 
         let r: u64 = 0;
@@ -1420,16 +1405,12 @@ impl Board {
     pub fn gen_checkmask(&mut self) {
         self.reset_checkmask();
 
-        let from = self
-            .get_bitboard(PieceType::WhiteKing.shiftedby(self.color()))
-            .trailing_zeros() as usize;
+        let from = self.get_bitboard(PieceType::WhiteKing.shiftedby(self.color())).trailing_zeros() as usize;
 
-        let main_bb: u64 =
-            self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces);
+        let main_bb: u64 = self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces);
         let rooks: u64 = self.get_bitboard(PieceType::WhiteRook.shiftedby(self.color().swapped()))
             | self.get_bitboard(PieceType::WhiteQueen.shiftedby(self.color().swapped()));
-        let bishops: u64 = self
-            .get_bitboard(PieceType::WhiteBishop.shiftedby(self.color().swapped()))
+        let bishops: u64 = self.get_bitboard(PieceType::WhiteBishop.shiftedby(self.color().swapped()))
             | self.get_bitboard(PieceType::WhiteQueen.shiftedby(self.color().swapped()));
 
         let mut right: u64 = main_bb;
@@ -1497,8 +1478,8 @@ impl Board {
         }
 
         // Knights can't double check
-        let knight_check = self.knight_bbmoves(from)
-            & self.get_bitboard(PieceType::WhiteKnight.shiftedby(self.color().swapped()));
+        let knight_check =
+            self.knight_bbmoves(from) & self.get_bitboard(PieceType::WhiteKnight.shiftedby(self.color().swapped()));
         if knight_check > 0 {
             self.update_checkmask(knight_check);
         }
@@ -1506,15 +1487,13 @@ impl Board {
         // Pawns can't double check either
         match self.color() {
             Color::White => {
-                let pawn_check =
-                    self.wpawn_bbmoves_atk(from) & self.get_bitboard(PieceType::BlackPawn);
+                let pawn_check = self.wpawn_bbmoves_atk(from) & self.get_bitboard(PieceType::BlackPawn);
                 if pawn_check > 0 {
                     self.update_checkmask(pawn_check);
                 }
             }
             Color::Black => {
-                let pawn_check =
-                    self.bpawn_bbmoves_atk(from) & self.get_bitboard(PieceType::WhitePawn);
+                let pawn_check = self.bpawn_bbmoves_atk(from) & self.get_bitboard(PieceType::WhitePawn);
                 if pawn_check > 0 {
                     self.update_checkmask(pawn_check);
                 }

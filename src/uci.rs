@@ -35,18 +35,14 @@ impl UciHandler {
         let mut se = Self {
             board: Board::new(),
             transposition_table: TranspositionTable::new(0),
-            options: StoredOptions {
-                use_tt: true,
-                t: TuneBox::default(),
-            },
+            options: StoredOptions { use_tt: true, t: TuneBox::default() },
             winc: 0,
             binc: 0,
             wtime: 0,
             btime: 0,
             nodes: 0,
         };
-        se.transposition_table
-            .resize(16000000 / std::mem::size_of::<Transposition>());
+        se.transposition_table.resize(16000000 / std::mem::size_of::<Transposition>());
         se
     }
 
@@ -88,8 +84,7 @@ impl UciHandler {
 
             Some("d") => {
                 print_bb(
-                    self.board.get_bitboard(PieceType::WhitePieces)
-                        | self.board.get_bitboard(PieceType::BlackPieces),
+                    self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces),
                 );
                 println!("{}", self.board.zobrist_hash());
                 self.board.print_eval_info();
@@ -100,11 +95,7 @@ impl UciHandler {
             Some("see") => {
                 println!(
                     "{}",
-                    self.board.see_threshold(
-                        self.board
-                            .chess_to_move(command.next().unwrap().to_string()),
-                        0
-                    )
+                    self.board.see_threshold(self.board.chess_to_move(command.next().unwrap().to_string()), 0)
                 );
                 Ok(())
             }
@@ -123,14 +114,11 @@ impl UciHandler {
 
                 match command.next() {
                     Some(x) if x.parse::<i32>().is_ok() => {
-                        self.transposition_table.resize(
-                            1000000 * x.parse::<usize>().unwrap()
-                                / std::mem::size_of::<Transposition>(),
-                        );
+                        self.transposition_table
+                            .resize(1000000 * x.parse::<usize>().unwrap() / std::mem::size_of::<Transposition>());
                         println!(
                             "info string Elements in new TT: {}",
-                            1000000 * x.parse::<usize>().unwrap()
-                                / std::mem::size_of::<Transposition>()
+                            1000000 * x.parse::<usize>().unwrap() / std::mem::size_of::<Transposition>()
                         );
                         Ok(())
                     }
@@ -183,11 +171,7 @@ impl UciHandler {
             );
 
             if option.get_str("Type").unwrap() == "spin" {
-                print!(
-                    " min {} max {}",
-                    option.get_str("Min").unwrap(),
-                    option.get_str("Max").unwrap()
-                );
+                print!(" min {} max {}", option.get_str("Min").unwrap(), option.get_str("Max").unwrap());
             }
             println!();
         }
@@ -201,11 +185,7 @@ impl UciHandler {
         println!(
             "{}",
             self.board.move_to_chess(
-                CompactMove::from(
-                    self.board
-                        .chess_to_move(command.next().ok_or(())?.to_owned())
-                )
-                .long_form()
+                CompactMove::from(self.board.chess_to_move(command.next().ok_or(())?.to_owned())).long_form()
             )
         );
         Ok(())
@@ -231,8 +211,7 @@ impl UciHandler {
         }
         let col = self.board.color();
 
-        let mut searcher: Searcher =
-            Searcher::new(&mut self.board, &mut self.transposition_table, self.options);
+        let mut searcher: Searcher = Searcher::new(&mut self.board, &mut self.transposition_table, self.options);
 
         let (time, inc) = match col {
             Color::White => (self.wtime, self.winc),
@@ -240,14 +219,9 @@ impl UciHandler {
         };
 
         searcher.search_for_ms(
-            time * self.options.t.time_num.max(0) as u128 / 1024
-                + inc * self.options.t.inc_num.max(0) as u128 / 1024,
+            time * self.options.t.time_num.max(0) as u128 / 1024 + inc * self.options.t.inc_num.max(0) as u128 / 1024,
             time / 2,
-            if self.nodes == 0 {
-                None
-            } else {
-                Some(self.nodes)
-            },
+            if self.nodes == 0 { None } else { Some(self.nodes) },
         );
 
         Ok(())
@@ -259,10 +233,7 @@ impl UciHandler {
             Some(a) if a.parse::<i32>().is_ok() => {
                 let mut searcher: Searcher =
                     Searcher::new(&mut self.board, &mut self.transposition_table, self.options);
-                println!(
-                    "{}",
-                    move_to_chess(searcher.search_to_depth(a.parse::<i32>().unwrap()))
-                );
+                println!("{}", move_to_chess(searcher.search_to_depth(a.parse::<i32>().unwrap())));
                 Ok(())
             }
             _ => Err(()),
@@ -467,16 +438,11 @@ impl UciHandler {
         }
     }
 
-    pub fn handle_moves(
-        &mut self,
-        command: &mut SplitWhitespace<'_>,
-        first_move: Option<&str>,
-    ) -> Result<(), ()> {
+    pub fn handle_moves(&mut self, command: &mut SplitWhitespace<'_>, first_move: Option<&str>) -> Result<(), ()> {
         let mut next: Option<&str> = first_move;
 
         while next.is_some() {
-            self.board
-                .make_move(&self.board.chess_to_move(String::from(next.unwrap())));
+            self.board.make_move(&self.board.chess_to_move(String::from(next.unwrap())));
             next = command.next();
         }
 
@@ -603,13 +569,7 @@ pub fn test_see_on_suite(suite_filename: &str) -> Result<(), Box<dyn Error>> {
 
 #[derive(Clone, Copy, Debug, strum_macros::EnumProperty, EnumIter)]
 enum EngineOption {
-    #[strum(props(
-        Name = "Hash",
-        Type = "spin",
-        Default = "16",
-        Min = "0",
-        Max = "999999999"
-    ))]
+    #[strum(props(Name = "Hash", Type = "spin", Default = "16", Min = "0", Max = "999999999"))]
     Hash,
     #[strum(props(Name = "UseTT", Type = "check", Default = "true"))]
     UseTT,

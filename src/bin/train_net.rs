@@ -48,24 +48,12 @@ pub fn main() {
             start_superbatch: 1,
             end_superbatch: 400,
         },
-        wdl_scheduler: wdl::LinearWDL {
-            start: 0.2,
-            end: 0.5,
-        },
-        lr_scheduler: lr::CosineDecayLR {
-            initial_lr: 0.001,
-            final_lr: 0.001 * 0.3f32.powi(5),
-            final_superbatch: 400,
-        },
+        wdl_scheduler: wdl::LinearWDL { start: 0.2, end: 0.5 },
+        lr_scheduler: lr::CosineDecayLR { initial_lr: 0.001, final_lr: 0.001 * 0.3f32.powi(5), final_superbatch: 400 },
         save_rate: 10,
     };
 
-    let settings = LocalSettings {
-        threads: 16,
-        test_set: None,
-        output_directory: "checkpoints",
-        batch_queue_size: 64,
-    };
+    let settings = LocalSettings { threads: 16, test_set: None, output_directory: "checkpoints", batch_queue_size: 64 };
 
     let data_loader = {
         use loader::viribinpack::{Filter, ViriBinpackLoader, ViriFilter};

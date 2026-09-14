@@ -7,9 +7,7 @@ impl BoardState {
 
         let bbs = self.bitboards();
         for i in 0..bbs.len() {
-            if num_to_piece(i) == PieceType::WhitePieces
-                || num_to_piece(i) == PieceType::BlackPieces
-            {
+            if num_to_piece(i) == PieceType::WhitePieces || num_to_piece(i) == PieceType::BlackPieces {
                 continue;
             }
 
@@ -32,8 +30,7 @@ impl Board {
     }
     pub fn update_zobrist_hash(&mut self, square: u64, piece_type: PieceType) {
         self.set_zobrist_hash(
-            self.zobrist_hash()
-                ^ RANDS[(piece_type as usize) * 64 + square.trailing_zeros() as usize],
+            self.zobrist_hash() ^ RANDS[(piece_type as usize) * 64 + square.trailing_zeros() as usize],
         );
     }
     pub fn update_zobrist_hash_square(&mut self, square: u64) {

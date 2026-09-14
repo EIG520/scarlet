@@ -80,11 +80,7 @@ pub struct Searcher<'a> {
 }
 
 impl<'a> Searcher<'a> {
-    pub fn new(
-        board: &'a mut Board,
-        transposition_table: &'a mut TranspositionTable,
-        options: StoredOptions,
-    ) -> Self {
+    pub fn new(board: &'a mut Board, transposition_table: &'a mut TranspositionTable, options: StoredOptions) -> Self {
         Self {
             board,
             root_best: Move::null(),
@@ -97,22 +93,11 @@ impl<'a> Searcher<'a> {
             history_table: HistoryTable::default(),
             options: Rc::from(options),
 
-            search_stack: [SearchStackEntry {
-                mv: Move::null(),
-                capt: false,
-                excluded: Move::null(),
-            }; MAX_PLY],
+            search_stack: [SearchStackEntry { mv: Move::null(), capt: false, excluded: Move::null() }; MAX_PLY],
         }
     }
 
-    pub fn search(
-        &mut self,
-        mut depth: i32,
-        mut alpha: i32,
-        beta: i32,
-        ply: usize,
-        timer: Instant,
-    ) -> i32 {
+    pub fn search(&mut self, mut depth: i32, mut alpha: i32, beta: i32, ply: usize, timer: Instant) -> i32 {
         if depth <= 0 {
             return self.qsearch(alpha, beta, ply);
         }
@@ -123,11 +108,7 @@ impl<'a> Searcher<'a> {
         let incheck = self.board.in_check();
         let pv = alpha != beta - 1;
         let reduce = !pv && !incheck;
-        let excluded = if ply < MAX_PLY {
-            self.search_stack[ply].excluded != Move::null()
-        } else {
-            false
-        };
+        let excluded = if ply < MAX_PLY { self.search_stack[ply].excluded != Move::null() } else { false };
         let t = self.options.t;
 
         if self.board.upcoming_draw() && !root {
@@ -162,10 +143,8 @@ impl<'a> Searcher<'a> {
             stat = score;
 
             // Detect possible singularity
-            maybe_singular = depth > 7
-                && entry.depth as i32 >= depth - 3
-                && entry.fail != Fail::FailLow
-                && score.abs() < 20000
+            maybe_singular =
+                depth > 7 && entry.depth as i32 >= depth - 3 && entry.fail != Fail::FailLow && score.abs() < 20000
         } else if depth > 4 {
             depth -= 1;
         }
@@ -188,19 +167,11 @@ impl<'a> Searcher<'a> {
             // null move pruning
             if depth > 2 && stat >= beta {
                 self.board.make_null_move();
-                self.search_stack[ply as usize] = SearchStackEntry {
-                    mv: Move::null(),
-                    capt: false,
-                    excluded: Move::null(),
-                };
+                self.search_stack[ply as usize] =
+                    SearchStackEntry { mv: Move::null(), capt: false, excluded: Move::null() };
 
-                let eval = -self.search(
-                    (depth * t.nmp_dmul + beta - stat) / t.nmp_ddiv - 1,
-                    -beta,
-                    1 - beta,
-                    ply + 1,
-                    timer,
-                );
+                let eval =
+                    -self.search((depth * t.nmp_dmul + beta - stat) / t.nmp_ddiv - 1, -beta, 1 - beta, ply + 1, timer);
 
                 self.board.unmake_null_move();
 
@@ -214,23 +185,9 @@ impl<'a> Searcher<'a> {
         self.board.gen_legal_moves(&mut mvs, false);
 
         if let Some(entry) = tt_entry {
-            self.board.score_moves_see(
-                &mut mvs,
-                entry.best_move,
-                &self.search_stack,
-                &t,
-                &self.history_table,
-                ply,
-            );
+            self.board.score_moves_see(&mut mvs, entry.best_move, &self.search_stack, &t, &self.history_table, ply);
         } else {
-            self.board.score_moves_see(
-                &mut mvs,
-                Move::null(),
-                &self.search_stack,
-                &t,
-                &self.history_table,
-                ply,
-            );
+            self.board.score_moves_see(&mut mvs, Move::null(), &self.search_stack, &t, &self.history_table, ply);
         }
 
         // Main Search
@@ -239,10 +196,7 @@ impl<'a> Searcher<'a> {
         let mut mvtype = Fail::FailLow;
 
         for i in 0..mvs.pos {
-            if self.nodes % 2048 == 0
-                && self.search_ms != 0
-                && timer.elapsed().as_millis() >= self.search_ms
-            {
+            if self.nodes % 2048 == 0 && self.search_ms != 0 && timer.elapsed().as_millis() >= self.search_ms {
                 return 30000;
             }
 
@@ -255,8 +209,7 @@ impl<'a> Searcher<'a> {
             }
 
             let is_capture = mv.to
-                & (self.board.get_bitboard(PieceType::WhitePieces)
-                    | self.board.get_bitboard(PieceType::BlackPieces))
+                & (self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces))
                 != 0;
             let is_qpromo = mv.flag == Flag::QueenPromotion;
 
@@ -302,11 +255,8 @@ impl<'a> Searcher<'a> {
             }
 
             self.board.make_move(&mv);
-            self.search_stack[ply] = SearchStackEntry {
-                mv,
-                capt: is_capture,
-                excluded: self.search_stack[ply].excluded,
-            };
+            self.search_stack[ply] =
+                SearchStackEntry { mv, capt: is_capture, excluded: self.search_stack[ply].excluded };
 
             if self.board.in_check() {
                 ext = 1;
@@ -320,10 +270,7 @@ impl<'a> Searcher<'a> {
 
             if i > ireq && depth >= 2 && (!is_capture && !is_qpromo) {
                 let reduction = (if pv { t.lmr_c_pv } else { t.lmr_c } as f32 / 1024.0
-                    + (depth as f32).ln()
-                        * (i as f32).ln()
-                        * if pv { t.lmr_num_pv } else { t.lmr_num } as f32
-                        / 1024.0
+                    + (depth as f32).ln() * (i as f32).ln() * if pv { t.lmr_num_pv } else { t.lmr_num } as f32 / 1024.0
                     - self.history_table.probe(&self.search_stack, mv, ply) as f32
                         / if pv { t.histred_div_pv } else { t.histred_div } as f32)
                     .floor() as i32;
@@ -382,22 +329,14 @@ impl<'a> Searcher<'a> {
                                 self.history_table.apply_delta(
                                     &self.search_stack,
                                     mv2,
-                                    -depth * depth * if pv { t.hist_dec_pv } else { t.hist_dec }
-                                        / 1024,
+                                    -depth * depth * if pv { t.hist_dec_pv } else { t.hist_dec } / 1024,
                                     ply,
                                 );
                             } else {
                                 self.history_table.apply_delta_tactical(
                                     mv2,
                                     self.board.piece_on_sq(mv2.to.trailing_zeros() as usize),
-                                    -depth
-                                        * depth
-                                        * if pv {
-                                            t.hist_dec_pv_quitact
-                                        } else {
-                                            t.hist_dec_quitact
-                                        }
-                                        / 1024,
+                                    -depth * depth * if pv { t.hist_dec_pv_quitact } else { t.hist_dec_quitact } / 1024,
                                 );
                             }
                         }
@@ -405,14 +344,7 @@ impl<'a> Searcher<'a> {
                         self.history_table.apply_delta_tactical(
                             mv,
                             self.board.piece_on_sq(mv.to.trailing_zeros() as usize),
-                            depth
-                                * depth
-                                * if pv {
-                                    t.hist_inc_pv_tact
-                                } else {
-                                    t.hist_inc_tact
-                                }
-                                / 1024,
+                            depth * depth * if pv { t.hist_inc_pv_tact } else { t.hist_inc_tact } / 1024,
                         );
 
                         for j in 0..i {
@@ -426,14 +358,7 @@ impl<'a> Searcher<'a> {
                                 self.history_table.apply_delta_tactical(
                                     mv2,
                                     self.board.piece_on_sq(mv2.to.trailing_zeros() as usize),
-                                    -depth
-                                        * depth
-                                        * if pv {
-                                            t.hist_dec_pv_ttact
-                                        } else {
-                                            t.hist_dec_ttact
-                                        }
-                                        / 1024,
+                                    -depth * depth * if pv { t.hist_dec_pv_ttact } else { t.hist_dec_ttact } / 1024,
                                 );
                             }
                         }
@@ -461,19 +386,12 @@ impl<'a> Searcher<'a> {
                 self.board,
                 depth as i8,
                 best,
-                if mvtype != Fail::FailLow || tt_entry.is_none() {
-                    best_move
-                } else {
-                    tt_entry.unwrap().best_move
-                },
+                if mvtype != Fail::FailLow || tt_entry.is_none() { best_move } else { tt_entry.unwrap().best_move },
                 mvtype,
             );
         }
 
-        if root
-            && (timer.elapsed().as_millis() < self.search_ms
-                || self.search_best_eval > self.root_best_eval)
-        {
+        if root && (timer.elapsed().as_millis() < self.search_ms || self.search_best_eval > self.root_best_eval) {
             self.root_best = self.search_best;
             self.root_best_eval = self.search_best_eval;
         }
@@ -524,21 +442,9 @@ impl<'a> Searcher<'a> {
         let mut mvs = MoveList::default();
         self.board.gen_legal_moves(&mut mvs, true);
         if let Some(entry) = tt_entry {
-            self.board.score_moves(
-                &mut mvs,
-                entry.best_move,
-                &self.search_stack,
-                &self.history_table,
-                ply,
-            );
+            self.board.score_moves(&mut mvs, entry.best_move, &self.search_stack, &self.history_table, ply);
         } else {
-            self.board.score_moves(
-                &mut mvs,
-                Move::null(),
-                &self.search_stack,
-                &self.history_table,
-                ply,
-            );
+            self.board.score_moves(&mut mvs, Move::null(), &self.search_stack, &self.history_table, ply);
         }
 
         // Main search
@@ -558,16 +464,12 @@ impl<'a> Searcher<'a> {
             }
 
             let is_capture = mv.to
-                & (self.board.get_bitboard(PieceType::WhitePieces)
-                    | self.board.get_bitboard(PieceType::BlackPieces))
+                & (self.board.get_bitboard(PieceType::WhitePieces) | self.board.get_bitboard(PieceType::BlackPieces))
                 != 0;
 
             self.board.make_move(&mv);
-            self.search_stack[ply] = SearchStackEntry {
-                mv,
-                capt: is_capture,
-                excluded: self.search_stack[ply].excluded,
-            };
+            self.search_stack[ply] =
+                SearchStackEntry { mv, capt: is_capture, excluded: self.search_stack[ply].excluded };
 
             let eval = -self.qsearch(-beta, -alpha, ply + 1);
 
@@ -772,12 +674,7 @@ impl<'a> Searcher<'a> {
     }
 
     pub fn white_eval(&mut self) -> i32 {
-        self.root_eval()
-            * if self.board.color() == Color::White {
-                1
-            } else {
-                -1
-            }
+        self.root_eval() * if self.board.color() == Color::White { 1 } else { -1 }
     }
 
     pub fn set_search_ms(&mut self, ms: u128) {

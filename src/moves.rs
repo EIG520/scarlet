@@ -132,8 +132,7 @@ impl Board {
         });
         // Castling
         if checkmask == u64::MAX {
-            let open = !(self.get_bitboard(PieceType::WhitePieces)
-                | self.get_bitboard(PieceType::BlackPieces));
+            let open = !(self.get_bitboard(PieceType::WhitePieces) | self.get_bitboard(PieceType::BlackPieces));
 
             if (self.get_bitboard(PieceType::CastleRights) & 0b1000 > 0)
                 && (attacked_squares & 0b0110 == 0)

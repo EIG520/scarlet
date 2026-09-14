@@ -41,8 +41,7 @@ impl Board {
         }
     }
     pub fn update_eval_promotion(&mut self, promotion_type: PieceType, from: u64, to: u64) {
-        let offset_promo =
-            384 * (promotion_type as usize & 1) + (promotion_type as usize >> 1) * 64;
+        let offset_promo = 384 * (promotion_type as usize & 1) + (promotion_type as usize >> 1) * 64;
         let offset_pawn = 384 * (promotion_type as usize & 1);
         let acc = self.get_waccum_mut();
         let weightsf = NNUE.feature_weights[offset_pawn + (from.trailing_zeros() ^ 7) as usize];
@@ -53,8 +52,7 @@ impl Board {
             acc.vals[i] += weightst.vals[i];
         }
 
-        let offset_promo =
-            384 * (!(promotion_type as usize) & 1) + (promotion_type as usize >> 1) * 64;
+        let offset_promo = 384 * (!(promotion_type as usize) & 1) + (promotion_type as usize >> 1) * 64;
         let offset_pawn = 384 * (!(promotion_type as usize) & 1);
         let acc = self.get_baccum_mut();
         let weightsf = NNUE.feature_weights[offset_pawn + (from.trailing_zeros() ^ 63) as usize];
@@ -202,16 +200,8 @@ impl Board {
     }
 
     pub fn gen_eval(&mut self) -> i32 {
-        let stm_accum = if self.color() == Color::White {
-            self.get_waccum()
-        } else {
-            self.get_baccum()
-        };
-        let ntm_accum = if self.color() == Color::White {
-            self.get_baccum()
-        } else {
-            self.get_waccum()
-        };
+        let stm_accum = if self.color() == Color::White { self.get_waccum() } else { self.get_baccum() };
+        let ntm_accum = if self.color() == Color::White { self.get_baccum() } else { self.get_waccum() };
 
         let mut output = 0;
 

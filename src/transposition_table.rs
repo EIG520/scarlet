@@ -19,13 +19,7 @@ pub struct Transposition {
 }
 impl Transposition {
     const fn empty() -> Self {
-        Transposition {
-            zobrist_leftbits: 0,
-            depth: 0,
-            score: 1,
-            fail: Fail::None,
-            best_move: CompactMove::empty(),
-        }
+        Transposition { zobrist_leftbits: 0, depth: 0, score: 1, fail: Fail::None, best_move: CompactMove::empty() }
     }
     pub fn check_zobrist(&self, hash: u64) -> bool {
         return self.zobrist_leftbits == (hash >> 32) as u32;
@@ -41,12 +35,7 @@ pub struct TranspositionInfo {
 }
 impl TranspositionInfo {
     pub fn from(t: Transposition) -> Self {
-        Self {
-            depth: t.depth,
-            score: t.score,
-            best_move: t.best_move.long_form(),
-            fail: t.fail,
-        }
+        Self { depth: t.depth, score: t.score, best_move: t.best_move.long_form(), fail: t.fail }
     }
 }
 
@@ -73,10 +62,7 @@ impl CompactMove {
         }
     }
     const fn empty() -> Self {
-        CompactMove {
-            data: 0,
-            flag: Flag::NoFlag,
-        }
+        CompactMove { data: 0, flag: Flag::NoFlag }
     }
 }
 
@@ -85,9 +71,7 @@ pub struct TranspositionTable {
 }
 impl TranspositionTable {
     pub fn new(size: usize) -> Self {
-        Self {
-            table: vec![Transposition::empty(); size],
-        }
+        Self { table: vec![Transposition::empty(); size] }
     }
     pub fn add(&mut self, board: &Board, depth: i8, score: i32, best_move: Move, fail: Fail) {
         let len = self.table.len() as u64;
@@ -105,9 +89,7 @@ impl TranspositionTable {
         let len = self.table.len() as u64;
         if len > 0 {
             let entry = self.table[(board.zobrist_hash() % len) as usize];
-            if (board.zobrist_hash() >> 32) as u32 == entry.zobrist_leftbits
-                && entry.fail != Fail::None
-            {
+            if (board.zobrist_hash() >> 32) as u32 == entry.zobrist_leftbits && entry.fail != Fail::None {
                 return Some(TranspositionInfo::from(entry));
             }
         }
@@ -129,8 +111,7 @@ pub struct HistoryTable {
 
 impl HistoryTable {
     pub fn probe(&self, ss: &[SearchStackEntry], mv: Move, ply: usize) -> i32 {
-        self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize]
-            [mv.to.trailing_zeros() as usize]
+        self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize]
             + self.probe_conthist(ss, mv, ply)
     }
 
@@ -152,8 +133,8 @@ impl HistoryTable {
         // };
 
         0 + if pmv != Move::null() {
-            self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize]
-                [mv.piece_type as usize][mv.to.trailing_zeros() as usize]
+            self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize]
+                [mv.to.trailing_zeros() as usize]
         } else {
             0
         } // + if ppmv != Move::null() {
@@ -180,25 +161,22 @@ impl HistoryTable {
         };
         // let ppmv = if let Some(m) = ssrev.next() { m.mv } else { Move::null() };
 
-        self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize]
-            [mv.to.trailing_zeros() as usize] += deltac
-            - self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize]
-                [mv.to.trailing_zeros() as usize]
+        self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] += deltac
+            - self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize]
                 * deltac.abs()
                 / 512;
 
         let contsum = if pmv != Move::null() {
-            self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize]
-                [mv.piece_type as usize][mv.to.trailing_zeros() as usize]
+            self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize]
+                [mv.to.trailing_zeros() as usize]
         } else {
             0
         };
         // + if ppmv != Move::null() { self.cont_2ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 };
 
         if pmv != Move::null() {
-            self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize]
-                [mv.piece_type as usize][mv.to.trailing_zeros() as usize] +=
-                deltac - contsum * deltac.abs() / 512;
+            self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize]
+                [mv.to.trailing_zeros() as usize] += deltac - contsum * deltac.abs() / 512;
         }
 
         // if ppmv != Move::null() {
@@ -210,12 +188,9 @@ impl HistoryTable {
     pub fn apply_delta_tactical(&mut self, mv: Move, pt: usize, delta: i32) {
         let deltac = delta.clamp(-512, 512);
 
-        self.capthist[pt][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] +=
-            deltac
-                - self.capthist[pt][mv.from.trailing_zeros() as usize]
-                    [mv.to.trailing_zeros() as usize]
-                    * deltac.abs()
-                    / 512;
+        self.capthist[pt][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] += deltac
+            - self.capthist[pt][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] * deltac.abs()
+                / 512;
     }
 
     pub fn add_killer(&mut self, mv: Move, ply: i32) {
