@@ -219,11 +219,11 @@ impl UciHandler {
             match next {
                 Some("perft") => return self.handle_perft(command),
                 Some("depth") => return self.handle_depth(command),
-                Some("wtime") => self.wtime = command.next().unwrap().parse::<u128>().unwrap(),
-                Some("btime") => self.btime = command.next().unwrap().parse::<u128>().unwrap(),
-                Some("winc") => self.winc = command.next().unwrap().parse::<u128>().unwrap(),
-                Some("binc") => self.binc = command.next().unwrap().parse::<u128>().unwrap(),
-                Some("nodes") => self.nodes = command.next().unwrap().parse::<u128>().unwrap(),
+                Some("wtime") => self.wtime = command.next().unwrap().parse::<i128>().unwrap().max(0) as u128,
+                Some("btime") => self.btime = command.next().unwrap().parse::<i128>().unwrap().max(0) as u128,
+                Some("winc") => self.winc = command.next().unwrap().parse::<i128>().unwrap().max(0) as u128,
+                Some("binc") => self.binc = command.next().unwrap().parse::<i128>().unwrap().max(0) as u128,
+                Some("nodes") => self.nodes = command.next().unwrap().parse::<i128>().unwrap().max(0) as u128,
                 _ => {}
             }
 
