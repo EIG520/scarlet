@@ -105,44 +105,56 @@ pub struct HistoryTable {
     killers: [Move; 100],
 
     capthist: Box<[[[i32; 64]; 64]; 12]>,
-    cont_1ply: Box<[[[[i32; 64]; 12]; 64]; 12]>,
-    // cont_2ply: Box<[[[[i32; 64]; 12]; 64]; 12]>,
+    cont_12ply: Box<[[[[i32; 64]; 12]; 64]; 12]>,
 }
 
 impl HistoryTable {
     pub fn probe(&self, ss: &[SearchStackEntry], mv: Move, ply: usize) -> i32 {
         self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize]
-            + self.probe_conthist(ss, mv, ply)
+            + self.probe_conthist_1ply(ss, mv, ply)
+            + self.probe_conthist_2ply(ss, mv, ply)
     }
 
-    pub fn probe_conthist(&self, ss: &[SearchStackEntry], mv: Move, ply: usize) -> i32 {
+    pub fn probe_low(&self, ss: &[SearchStackEntry], mv: Move, ply: usize) -> i32 {
+        self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize]
+            + self.probe_conthist_1ply(ss, mv, ply) / 2
+            + self.probe_conthist_2ply(ss, mv, ply) / 2
+    }
+
+    pub fn probe_conthist_1ply(&self, ss: &[SearchStackEntry], mv: Move, ply: usize) -> i32 {
         let pmv = if ply > 0
             && let Some(m) = ss.get(ply - 1)
         {
+            debug_assert_ne!(m.mv.piece_type as usize & 1, mv.piece_type as usize & 1);
             m.mv
         } else {
             Move::null()
         };
 
-        // let ppmv = if ply > 0
-        //     && let Some(m) = ss.get(ply - 2)
-        // {
-        //     m.mv
-        // } else {
-        //     Move::null()
-        // };
-
-        0 + if pmv != Move::null() {
-            self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize]
+        if pmv != Move::null() {
+            self.cont_12ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize]
                 [mv.to.trailing_zeros() as usize]
         } else {
             0
-        } // + if ppmv != Move::null() {
-        //     self.cont_2ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize]
-        //         [mv.piece_type as usize][mv.to.trailing_zeros() as usize]
-        // } else {
-        //     0
-        // }
+        }
+    }
+
+    pub fn probe_conthist_2ply(&self, ss: &[SearchStackEntry], mv: Move, ply: usize) -> i32 {
+        let ppmv = if ply > 1
+            && let Some(m) = ss.get(ply - 2)
+        {
+            debug_assert_eq!(m.mv.piece_type as usize & 1, mv.piece_type as usize & 1);
+            m.mv
+        } else {
+            Move::null()
+        };
+
+        if ppmv != Move::null() {
+            self.cont_12ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize]
+                [mv.piece_type as usize][mv.to.trailing_zeros() as usize]
+        } else {
+            0
+        }
     }
 
     pub fn probe_tactical(&self, mv: Move, pt: usize) -> i32 {
@@ -159,30 +171,33 @@ impl HistoryTable {
         } else {
             Move::null()
         };
-        // let ppmv = if let Some(m) = ssrev.next() { m.mv } else { Move::null() };
+
+        let ppmv = if ply > 1
+            && let Some(m) = ss.get(ply - 2)
+        {
+            m.mv
+        } else {
+            Move::null()
+        };
 
         self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize] += deltac
             - self.data[mv.piece_type as usize][mv.from.trailing_zeros() as usize][mv.to.trailing_zeros() as usize]
                 * deltac.abs()
                 / 512;
 
-        let contsum = if pmv != Move::null() {
-            self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize]
-                [mv.to.trailing_zeros() as usize]
-        } else {
-            0
-        };
-        // + if ppmv != Move::null() { self.cont_2ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] } else { 0 };
-
         if pmv != Move::null() {
-            self.cont_1ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize]
-                [mv.to.trailing_zeros() as usize] += deltac - contsum * deltac.abs() / 512;
+            let cval = self.cont_12ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize];
+
+            self.cont_12ply[pmv.piece_type as usize][pmv.to.trailing_zeros() as usize][mv.piece_type as usize]
+                [mv.to.trailing_zeros() as usize] += deltac - cval * deltac.abs() / 512;
         }
 
-        // if ppmv != Move::null() {
-        //     self.cont_2ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] +=
-        //             deltac - contsum * deltac.abs() / 512;
-        // }
+        if ppmv != Move::null() {
+            let cval = self.cont_12ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize];
+
+            self.cont_12ply[ppmv.piece_type as usize][ppmv.to.trailing_zeros() as usize][mv.piece_type as usize][mv.to.trailing_zeros() as usize] +=
+                    deltac - cval * deltac.abs() / 512;
+        }
     }
 
     pub fn apply_delta_tactical(&mut self, mv: Move, pt: usize, delta: i32) {
@@ -207,8 +222,7 @@ impl Default for HistoryTable {
         Self {
             data: [[[0; 64]; 64]; 12],
             killers: [Move::null(); 100],
-            cont_1ply: unsafe { Box::<_>::new_zeroed().assume_init() },
-            // cont_2ply: unsafe { Box::<_>::new_zeroed().assume_init() },
+            cont_12ply: unsafe { Box::<_>::new_zeroed().assume_init() },
             capthist: unsafe { Box::<_>::new_zeroed().assume_init() },
         }
     }

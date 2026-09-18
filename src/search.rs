@@ -271,7 +271,7 @@ impl<'a> Searcher<'a> {
             if i > ireq && depth >= 2 && (!is_capture && !is_qpromo) {
                 let reduction = (if pv { t.lmr_c_pv } else { t.lmr_c } as f32 / 1024.0
                     + (depth as f32).ln() * (i as f32).ln() * if pv { t.lmr_num_pv } else { t.lmr_num } as f32 / 1024.0
-                    - self.history_table.probe(&self.search_stack, mv, ply) as f32
+                    - self.history_table.probe_low(&self.search_stack, mv, ply) as f32
                         / if pv { t.histred_div_pv } else { t.histred_div } as f32)
                     .floor() as i32;
 
@@ -291,6 +291,8 @@ impl<'a> Searcher<'a> {
             }
 
             self.board.undo();
+            self.search_stack[ply] =
+                SearchStackEntry { mv: Move::null(), capt: is_capture, excluded: self.search_stack[ply].excluded };
 
             if eval > best {
                 best = eval;
@@ -474,6 +476,8 @@ impl<'a> Searcher<'a> {
             let eval = -self.qsearch(-beta, -alpha, ply + 1);
 
             self.board.undo();
+            self.search_stack[ply] =
+                SearchStackEntry { mv: Move::null(), capt: is_capture, excluded: self.search_stack[ply].excluded };
 
             if eval > best {
                 best = eval;
