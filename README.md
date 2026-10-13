@@ -21,6 +21,7 @@ Scarlet v2 is not yet tested on CCRL, but based on internal tests should be ~340
 - Late move pruning
 - Late move reductions
 - Static Exchange Evaluation (SEE) pruning and move ordering
+- Singular Extensions (SE) with multicut
 - Improving heuristic
 - History heuristic using [type][from][to] w/ gravity, penalties, and reductions for LMR
 - Capture history
