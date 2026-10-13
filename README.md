@@ -5,7 +5,7 @@ Scarlet is an open source chess engine that implements most of the UCI protocol.
 
 ## Strength
 
-Scarlet v1 is rated 2640 on the CCRL blitz rating list as of August 9th, 2026.
+Scarlet v1 is rated 2640 on the CCRL blitz rating list as of August 9th, 2026.\
 Scarlet v2 is not yet tested on CCRL, but based on internal tests should be ~3400 elo.
 
 ## Engine Features
