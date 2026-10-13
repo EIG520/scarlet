@@ -6,6 +6,7 @@ Scarlet is an open source chess engine that implements most of the UCI protocol.
 ## Strength
 
 Scarlet v1 is rated 2640 on the CCRL blitz rating list as of August 9th, 2026.
+Scarlet v2 is not yet tested on CCRL, but based on internal tests should be ~3400 elo.
 
 ## Engine Features
 
@@ -19,13 +20,17 @@ Scarlet v1 is rated 2640 on the CCRL blitz rating list as of August 9th, 2026.
 - Futility pruning
 - Late move pruning
 - Late move reductions
+- Static Exchange Evaluation (SEE) pruning and move ordering
+- Improving heuristic
 - History heuristic using [type][from][to] w/ gravity, penalties, and reductions for LMR
+- Capture history
+- Continuation history (1+2 ply)
 - Killer moves heuristic
 - Hard/Soft time management
 - Check extension
-- Aspiration window
+- Aspiration windows
 - Early cycle/repetition detection
-- [PeSTO evaluation](https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function)
+- Efficiently updatable neural network (NNUE) evaluation using 768->512x2->1 architecture.
 
 ## Usage
 
