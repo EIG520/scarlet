@@ -157,7 +157,7 @@ impl UciHandler {
     }
 
     pub fn handle_uci(&mut self) {
-        println!("id name Scarlet v1.0");
+        println!("id name Scarlet v2.0");
         println!("id author Evan Guerra");
 
         println!();
