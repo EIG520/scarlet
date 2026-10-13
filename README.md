@@ -31,7 +31,7 @@ Scarlet v2 is not yet tested on CCRL, but based on internal tests should be ~340
 - Check extension
 - Aspiration windows
 - Early cycle/repetition detection
-- Efficiently updatable neural network (NNUE) evaluation using 768->512x2->1 architecture.
+- Efficiently updatable neural network (NNUE) evaluation using 768->512x2->1 architecture, trained on 2GB of selfplay data in viriformat.
 
 ## Usage
 
